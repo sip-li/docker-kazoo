@@ -152,4 +152,4 @@ KAZOO_SETTLE_DELAY=${KAZOO_SETTLE_DELAY:-20}
 sleep $KAZOO_SETTLE_DELAY
 
 cd ~ 
-    exec erl -name ${ERLANG_NODE}@$(env hostname -f) -args_file /etc/kazoo/vm.args -noshell -s $ERLANG_METHOD 2>&1
+    su kazoo -c "exec erl -name ${ERLANG_NODE}@$(env hostname -f) -args_file /etc/kazoo/vm.args -noshell -s $ERLANG_METHOD 2>&1"
