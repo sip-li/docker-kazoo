@@ -1,0 +1,155 @@
+#!/bin/bash
+
+# args: 1=service
+get_endpoint_ips() {
+    local SERVICE=$1
+    local TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+    local HOST=$(dig +short +search kubernetes)
+    local ENDPOINTS=$(curl -sSL -k -H "Authorization: Bearer $TOKEN" https://$HOST/api/v1/endpoints | jq -r ".items[] | select(.metadata.name == \"${SERVICE}\") | .subsets[] | .addresses[] | .ip")
+    echo "$ENDPOINTS"
+}
+
+get_amqp_uri() {
+    local AMQP_HOST=$(dig +short +search rabbitmq)
+    local AMQP_PORT=$(dig +short +search SRV _amqp._tcp.rabbitmq | awk '{print $3}')
+    local AMQP_URI="amqp://guest:guest@${AMQP_HOST}:${AMQP_PORT}"
+    echo $AMQP_URI
+}
+
+get_service_host() {
+    local SERVICE=$1
+    local SERVICE_HOST=$(dig +short +search $SERVICE)
+    echo $SERVICE_HOST
+}
+
+# args:
+#   1: service
+#   2: protocol
+#   3. portname
+get_service_port() {
+    local SERVICE=$1
+    local PROTOCOL=$2
+    local PORTNAME=$3
+    local PORT=$(dig +short +search SRV _${PORTNAME}._${PROTOCOL}.${SERVICE} | awk '{print $3}')
+    echo $PORT
+}
+
+get_bigcouch_secret() {
+    if [ -f '/etc/secrets/bigcouch/secret' ]; then
+        local SECRET=$(cat /etc/secrets/bigcouch/secret)
+    else
+        local SECRET=some-horrible-default
+    fi
+    echo "$SECRET"
+}
+
+link_erlang_cookie() {
+    if [ -f '/etc/secrets/erlang/cookie' ]; then
+        echo "Linking Erlang Cookie"
+        yes | cp -rf /etc/secrets/erlang/cookie ~/.erlang.cookie
+        chown kazoo:kazoo ~/.erlang.cookie
+        chmod 0600 ~/.erlang.cookie
+    else
+        echo "*** No Erlang Cookie Mounted! ***"
+        echo insecure-cookie > ~/.erlang.cookie
+        chown kazoo:kazoo ~/.erlang.cookie
+        chmod 0600 ~/.erlang.cookie
+    fi
+}
+
+get_erlang_cookie() {
+    local COOKIE=$(cat ~/.erlang.cookie)
+    echo "$COOKIE"
+}
+
+echo "Grabbing Environment Vars ..."
+
+DATACENTER=${DATACENTER:-dev}
+REGION=${REGION:-local}
+DEFAULT_KAZOO_ZONE="${REGION}-${DATACENTER}"
+KAZOO_ZONE=${KAZOO_ZONE:-$DEFAULT_KAZOO_ZONE}
+KAZOO_LOGLEVEL=${KAZOO_LOGLEVEL:-info}
+
+
+echo "Getting Erlang Cookie ..."
+link_erlang_cookie
+ERLANG_COOKIE=$(get_erlang_cookie)
+
+
+echo "Getting AMQP URI ..."
+AMQP_URI=$(get_amqp_uri)
+
+
+echo "Getting Bigcouch Details ..."
+BIGCOUCH_HOST=$(get_service_host 'bigcouch')
+BIGCOUCH_DATA_PORT=$(get_service_port 'bigcouch' 'tcp' 'data')
+BIGCOUCH_ADMIN_PORT=$(get_service_port 'bigcouch' 'tcp' 'admin')
+BIGCOUCH_USER=${BIGCOUCH_USER:-admin}
+BIGCOUCH_SECRET=$(get_bigcouch_secret)
+
+if [ "$BIGCOUCH_SECRET" == 'some-horrible-default' ]; then
+    echo "*** No secret file found at /etc/secrets/bigcouch/secret, using insecure backup ***"
+else
+    echo "Admin secret successfuly read from secret volume file ..."
+fi
+
+echo "Writing /etc/kazoo/config.ini ..."
+tee  /etc/kazoo/config.ini <<EOF
+[zone]
+name = "$KAZOO_ZONE"
+amqp_uri = "$AMQP_URI"
+
+[bigcouch]
+compact_automatically = true
+ip = "$BIGCOUCH_HOST"
+port = $BIGCOUCH_DATA_PORT
+admin_port = $BIGCOUCH_ADMIN_PORT
+zone = "$KAZOO_ZONE"
+cookie = $ERLANG_COOKIE
+username = "$BIGCOUCH_USER"
+password = "$BIGCOUCH_SECRET"
+
+[whistle_apps]
+zone = "$KAZOO_ZONE"
+cookie = $ERLANG_COOKIE
+
+[ecallmgr]
+zone = "$KAZOO_ZONE"
+cookie = $ERLANG_COOKIE
+
+[log]
+console = $KAZOO_LOGLEVEL
+file = error
+EOF
+
+if [ -n "$KUBERNETES_HOSTNAME_FIX" ]; then
+    echo "Applying kubernetes hostname fix"
+    ln -sf /opt/kazoo/bin/hostname-fix /opt/kazoo/bin/hostname
+    chown kazoo:kazoo /opt/kazoo/bin/hostname
+    export HOSTNAME=$(/opt/kazoo/bin/hostname-fix)
+    echo "127.0.0.1    $HOSTNAME" >> /etc/hosts
+fi
+
+echo "Finished setting up Kazoo Environment ..."
+
+KAZOO_APP=${KAZOO_APP:-whapps}
+if [ "$KAZOO_APP" == 'whapps' ]; then
+    ERLANG_METHOD=whistle_apps
+    ERLANG_NODE=whistle_apps
+elif [ "$KAZOO_APP" == 'ecallmgr' ]; then
+    ERLANG_METHOD=ecallmgr
+    ERLANG_NODE=ecallmgr
+else
+    echo "Maybe you should figure out what you want first ..."
+    exit 1
+fi
+
+echo "Starting $ERLANG_METHOD using node: $ERLANG_NODE@$(env hostname -f)"
+export ERL_CRASH_DUMP=$(date +%s)_${ERLANG_NODE}_erl_crash.dump
+export ERL_LIBS=${HOME}/deps:${HOME}/core:${HOME}/applications:$ERL_LIBS
+
+KAZOO_SETTLE_DELAY=${KAZOO_SETTLE_DELAY:-20}
+sleep $KAZOO_SETTLE_DELAY
+
+cd ~ 
+    exec erl -name ${ERLANG_NODE}@$(env hostname -f) -args_file /etc/kazoo/vm.args -noshell -s $ERLANG_METHOD 2>&1
