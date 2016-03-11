@@ -1,12 +1,12 @@
 kind: Pod
 apiVersion: v1
 metadata:
-  name: whapps
+  name: ecallmgr
   labels:
     app: kazoo
     otp-release: R15B
     kazoo-app: whapps
-    role: whapps-server
+    role: call-manager
 spec:
   volumes:
     - name: erlang-cookie-secret
@@ -16,11 +16,11 @@ spec:
       secret:
         secretName: bigcouch-admin-secret
   containers:
-    - name: whapps
+    - name: ecallmgr
       image: callforamerica/kazoo
       env:
         - name: KAZOO_APP
-          value: whapps
+          value: ecallmgr
         - name: DATACENTER
           value: sl
         - name: REGION

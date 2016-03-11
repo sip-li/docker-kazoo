@@ -1,0 +1,18 @@
+kind: Service
+apiVersion: v1
+metadata: 
+  name: whapps
+  labels:
+    app: kazoo
+    kazoo-app: whapps
+    opt-release: R15B
+    role: whapp-server
+spec:
+  selector:
+    app: kazoo
+    project: valuphone
+    kazoo-app: whapps
+  ports:
+    - name: crossbar
+      protocol: TCP
+      port: 8000

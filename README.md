@@ -16,7 +16,7 @@ Reccomended use is to run two instances, one for `whapps` and one for `ecallmgr`
 
 ### 1. Kubernetes Pod hostname's do not reflect it's PodIP assigned DNS. 
 
-The hack I've done to work around this requires root privileges at runtime, effectively breaking the ability to set a non root user in the dockerfile.  `USER <>` has been commented out in the dockerfile for this reason.
+The hack I've done to work around this requires root privileges at runtime, effectively breaking the ability to set a non root user in the dockerfile.  `USER kazoo` has been commented out in the dockerfile for this reason.
 
 Docker by design does not allow you to change the hostname of a container after creation.  It also manages the /etc/hosts file, which means chown's in the docker build process are set back to root again when a container is created.
 
