@@ -106,8 +106,8 @@ port = $BIGCOUCH_DATA_PORT
 admin_port = $BIGCOUCH_ADMIN_PORT
 zone = "$KAZOO_ZONE"
 cookie = $ERLANG_COOKIE
-username = "$BIGCOUCH_USER"
-password = "$BIGCOUCH_SECRET"
+;username = "$BIGCOUCH_USER"
+;password = "$BIGCOUCH_SECRET"
 
 [whistle_apps]
 zone = "$KAZOO_ZONE"
@@ -147,9 +147,6 @@ fi
 echo "Starting $ERLANG_METHOD using node: $ERLANG_NODE@$(env hostname -f)"
 export ERL_CRASH_DUMP=$(date +%s)_${ERLANG_NODE}_erl_crash.dump
 export ERL_LIBS=${HOME}/deps:${HOME}/core:${HOME}/applications:$ERL_LIBS
-
-KAZOO_SETTLE_DELAY=${KAZOO_SETTLE_DELAY:-20}
-sleep $KAZOO_SETTLE_DELAY
 
 cd ~ 
     su kazoo -c "exec erl -name ${ERLANG_NODE}@$(env hostname -f) -args_file /etc/kazoo/vm.args -noshell -s $ERLANG_METHOD 2>&1"

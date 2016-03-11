@@ -16,9 +16,10 @@ RUN     /tmp/setup.sh
 
 COPY    entrypoint /usr/bin/entrypoint
 
-ENV     KUBERNETES_HOSTNAME_FIX=true \
-        HOME=/opt/kazoo \
-        PATH=/opt/kazoo/bin:$PATH
+ENV     HOME=/opt/kazoo \
+        PATH=/opt/kazoo/bin:$PATH \
+        KUBERNETES_HOSTNAME_FIX=true \
+        KAZOO_USE_LONGNAME=true
 
 VOLUME  ["/opt/kazoo"]
 

@@ -45,7 +45,7 @@ shell:
 	@docker exec -ti $(NAME) /bin/ash
 
 run:
-	@docker run -it --rm --name $(NAME) -e "KUBERNETES_HOSTNAME_FIX=true" --entrypoint bash $(LOCAL_TAG)
+	@docker run -it --rm --name $(NAME) --entrypoint bash $(LOCAL_TAG)
 
 launch:
 	@docker run -d --name $(NAME) $(LOCAL_TAG)

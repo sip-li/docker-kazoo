@@ -81,6 +81,21 @@ EOF
 chmod +x /opt/kazoo/bin/hostname-fix
 
 
+echo "Writing .bashrc ..."
+tee ~/.bashrc <<'EOF'
+#!/bin/bash
+
+if [ "$KUBERNETES_HOSTNAME_FIX" == true ]; then
+    if [ "$KAZOO_USE_LONGNAME" == true ]; then
+        export HOSTNAME=$(hostname -f)
+    else
+        export HOSTNAME=$(hostname)
+    fi
+fi
+EOF
+chown kazoo:kazoo ~/.bashrc
+
+
 echo "Setting Ownership & Permissions ..."
 chown -R kazoo:kazoo /opt/kazoo
 
