@@ -12,7 +12,9 @@ spec:
     app: kazoo
     project: valuphone
     kazoo-app: whapps
+  type: NodePort
   ports:
     - name: crossbar
       protocol: TCP
       port: 8000
+      nodePort: 8000

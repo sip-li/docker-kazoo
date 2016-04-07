@@ -3,7 +3,7 @@ kind: ReplicationController
 metadata:
   name: ecallmgr
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     app: kazoo
     project: valuphone
@@ -39,6 +39,14 @@ spec:
             - name: erlang-cookie-secret
               readOnly: true
               mountPath: /etc/secrets/erlang
-        - name: dns
-          image: callforamerica/go-dnsmasq
+          resources:
+            requests: 
+              cpu: 2
+              memory: 2G
+            # limits:
+            #   cpu:
+            #   memory:
+
+        # - name: dns
+        #   image: callforamerica/go-dnsmasq
       restartPolicy: Always

@@ -3,7 +3,7 @@ kind: ReplicationController
 metadata:
   name: whapps
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     app: kazoo
     project: valuphone
@@ -48,7 +48,14 @@ spec:
           ports:
             - name: crossbar
               protocol: TCP
-              containerPort: 8000     
-        - name: dns
-          image: callforamerica/go-dnsmasq
+              containerPort: 8000
+          resources:
+            requests: 
+              cpu: 2
+              memory: 2G
+            # limits:
+            #   cpu:
+            #   memory:
+        # - name: dns
+        #   image: callforamerica/go-dnsmasq
       restartPolicy: Always
