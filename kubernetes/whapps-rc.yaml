@@ -25,6 +25,9 @@ spec:
         - name: bigcouch-admin-secret
           secret:
             secretName: bigcouch-admin-secret
+        - name: api-tls
+          secret:
+            secretName: api-tls
       containers:
         - name: whapps
           image: callforamerica/kazoo
@@ -37,6 +40,8 @@ spec:
               value: east 
             - name: KAZOO_LOGLEVEL
               value: info
+            - name: TLS_ENABLED
+              value: true
           imagePullPolicy: Always
           volumeMounts:
             - name: erlang-cookie-secret
@@ -45,6 +50,9 @@ spec:
             - name: bigcouch-admin-secret
               readOnly: true
               mountPath: /etc/secrets/bigcouch
+            - name: api-tls
+              readOnly: true
+              mountPath: /etc/secrets/tls
           ports:
             - name: crossbar
               protocol: TCP
@@ -56,6 +64,4 @@ spec:
             # limits:
             #   cpu:
             #   memory:
-        # - name: dns
-        #   image: callforamerica/go-dnsmasq
       restartPolicy: Always

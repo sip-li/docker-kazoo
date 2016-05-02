@@ -130,6 +130,13 @@ if [ -n "$KUBERNETES_HOSTNAME_FIX" ]; then
     echo "127.0.0.1    $HOSTNAME" >> /etc/hosts
 fi
 
+if [ "$TLS_ENABLED" ]; then
+    if [ -d /etc/secrets/tls ]; then
+        echo "Linking SSL Certs ..."
+        ln -sf /etc/secrets/tls /opt/kazoo/applications/crossbar/priv/ssl
+    fi
+fi
+
 echo "Finished setting up Kazoo Environment ..."
 
 KAZOO_APP=${KAZOO_APP:-whapps}

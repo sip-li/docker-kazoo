@@ -26,27 +26,26 @@ EOF
 
 echo "Installing dependencies ..."
 # installing epel for htmldoc (a dep of kazoo now)
-# curl -o /tmp/epel.rpm -L http://dl.fedoraproject.org/pub/epel/6Server/x86_64/epel-release-6-8.noarch.rpm
 rpm -Uvh http://dl.fedoraproject.org/pub/epel/6Server/x86_64/epel-release-6-8.noarch.rpm
-# rm -rf /tmp/epel.rpm
 
 yum -y update
-yum -y install bind-utils
+yum -y install bind-utils git
 
 
 echo "Installing kazoo ..."
 yum -y install kazoo-${KAZOO_RELEASE} monster-ui*
 
+echo "Installing api-explorer ..."
+
+cd /var/www/html/monster-ui/apps
+	git https://github.com/siplabs/monster-ui-apiexplorer
 
 echo "Installing JQ ..."
 curl -o /usr/local/bin/jq -sSL https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64
 chmod +x /usr/local/bin/jq
 
 
-# echo "Creating Directories ..."
-# mkdir -p /var/lib/kamailio/bin
-# mkdir -p /var/run/kamailio
-# mkdir -p /tmp/kamailio
+echo "Creating Directories ..."
 mkdir -p /opt/kazoo/bin
 
 echo "Writing Hostname override fix ..."
@@ -98,35 +97,6 @@ chown kazoo:kazoo ~/.bashrc
 
 echo "Setting Ownership & Permissions ..."
 chown -R kazoo:kazoo /opt/kazoo
-
-# # /etc/kamailio
-# chown -R kamailio:kamailio /etc/kazoo/kamailio
-# find /etc/kazoo/kamailio -type f -exec chmod 0644 {} \;
-# find /etc/kazoo/kamailio -type d -exec chmod 0755 {} \;
-
-# # /etc/kamailio/certs
-# chown -R kamailio:kamailio /etc/kazoo/kamailio/certs
-# find /etc/kazoo/kamailio/certs -type f -exec chmod 0644 {} \;
-# find /etc/kazoo/kamailio/certs -type d -exec chmod 0755 {} \;
-
-# # /etc/kamailio/dbtext
-# chown -R kamailio:kamailio /etc/kazoo/kamailio/dbtext
-# find /etc/kazoo/kamailio/dbtext -type f -exec chmod 0644 {} \;
-# find /etc/kazoo/kamailio/dbtext -type d -exec chmod 0755 {} \;
-
-# # /usr/lib64/kamailio
-# chown -R root:root /usr/lib64/kamailio
-# find /usr/lib64/kamailio -type f -exec chmod 0766 {} \;
-# find /usr/lib64/kamailio -type d -exec chmod 0755 {} \;
-
-# # /var/run/kamailio
-# chown -R kamailio:kamailio /var/run/kamailio
-# find /var/run/kamailio -type f -exec chmod 0660 {} \;
-# find /var/run/kamailio -type d -exec chmod 0770 {} \;
-
-# # /tmp/kamailio
-# chown -R kamailio:kamailio /tmp/kamailio
-# chmod -R 0777 /tmp/kamailio
 
 
 echo "Cleaning up ..."
