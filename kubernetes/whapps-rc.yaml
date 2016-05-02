@@ -57,6 +57,9 @@ spec:
             - name: crossbar
               protocol: TCP
               containerPort: 8000
+            - name: crossbar-tls
+              protocol: TCP
+              containerPort: 8443
           resources:
             requests: 
               cpu: 2

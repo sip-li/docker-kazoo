@@ -46,5 +46,8 @@ spec:
       ports:
         - name: crossbar
           protocol: TCP
-          containerPort: 8000     
+          containerPort: 8000
+        - name: crossbar-tls
+          protocol: TCP
+          containerPort: 8443
   restartPolicy: Always

@@ -23,7 +23,7 @@ ENV     HOME=/opt/kazoo \
 
 VOLUME  ["/opt/kazoo"]
 
-EXPOSE  4369 8000 11500-11999
+EXPOSE  4369 8000 8443 11500-11999
 
 # USER    kazoo
 
