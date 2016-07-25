@@ -39,9 +39,9 @@ spec:
             - name: REGION
               value: east 
             - name: KAZOO_LOGLEVEL
-              value: info
+              value: debug
             - name: TLS_ENABLED
-              value: true
+              value: 'true'
           imagePullPolicy: Always
           volumeMounts:
             - name: erlang-cookie-secret

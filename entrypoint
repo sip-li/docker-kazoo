@@ -81,7 +81,7 @@ AMQP_URI=$(get_amqp_uri)
 
 
 echo "Getting Bigcouch Details ..."
-BIGCOUCH_HOST=$(get_service_host 'bigcouch')
+BIGCOUCH_HOST=$(get_service_host 'bigcouchbal')
 BIGCOUCH_DATA_PORT=$(get_service_port 'bigcouch' 'tcp' 'data')
 BIGCOUCH_ADMIN_PORT=$(get_service_port 'bigcouch' 'tcp' 'admin')
 BIGCOUCH_USER=${BIGCOUCH_USER:-admin}
