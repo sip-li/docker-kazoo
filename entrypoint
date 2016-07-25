@@ -55,6 +55,7 @@ link_erlang_cookie() {
         # chown kazoo:kazoo ~/.erlang.cookie
         # chmod 0600 ~/.erlang.cookie
     fi
+    echo "$cookie" > ~/.erlang.cookie
     chown kazoo:kazoo ~/.erlang.cookie
     chmod 0600 ~/.erlang.cookie
 }
@@ -84,8 +85,8 @@ AMQP_URI=$(get_amqp_uri)
 
 echo "Getting Bigcouch Details ..."
 BIGCOUCH_HOST=$(get_service_host 'bigcouchbal')
-BIGCOUCH_DATA_PORT=$(get_service_port 'bigcouch' 'tcp' 'data')
-BIGCOUCH_ADMIN_PORT=$(get_service_port 'bigcouch' 'tcp' 'admin')
+BIGCOUCH_DATA_PORT=5984
+BIGCOUCH_ADMIN_PORT=5986
 BIGCOUCH_USER=${BIGCOUCH_USER:-admin}
 BIGCOUCH_SECRET=$(get_bigcouch_secret)
 

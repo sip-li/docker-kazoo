@@ -25,9 +25,9 @@ spec:
         - name: bigcouch-admin-secret
           secret:
             secretName: bigcouch-admin-secret
-        - name: api-tls
-          secret:
-            secretName: api-tls
+        # - name: api-tls
+        #   secret:
+        #     secretName: api-tls
       containers:
         - name: whapps
           image: callforamerica/kazoo
@@ -50,9 +50,9 @@ spec:
             - name: bigcouch-admin-secret
               readOnly: true
               mountPath: /etc/secrets/bigcouch
-            - name: api-tls
-              readOnly: true
-              mountPath: /etc/secrets/tls
+            # - name: api-tls
+            #   readOnly: true
+            #   mountPath: /etc/secrets/tls
           ports:
             - name: crossbar
               protocol: TCP
