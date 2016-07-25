@@ -46,15 +46,17 @@ get_bigcouch_secret() {
 link_erlang_cookie() {
     if [ -f '/etc/secrets/erlang/cookie' ]; then
         echo "Linking Erlang Cookie"
-        yes | cp -rf /etc/secrets/erlang/cookie ~/.erlang.cookie
-        chown kazoo:kazoo ~/.erlang.cookie
-        chmod 0600 ~/.erlang.cookie
+        cookie=$(cat /etc/secrets/erlang/cookie)
+        # yes | cp -rf /etc/secrets/erlang/cookie ~/.erlang.cookie
     else
         echo "*** No Erlang Cookie Mounted! ***"
-        echo insecure-cookie > ~/.erlang.cookie
-        chown kazoo:kazoo ~/.erlang.cookie
-        chmod 0600 ~/.erlang.cookie
+        cookie=insecure-cookie
+        # echo insecure-cookie > ~/.erlang.cookie
+        # chown kazoo:kazoo ~/.erlang.cookie
+        # chmod 0600 ~/.erlang.cookie
     fi
+    chown kazoo:kazoo ~/.erlang.cookie
+    chmod 0600 ~/.erlang.cookie
 }
 
 get_erlang_cookie() {
