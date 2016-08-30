@@ -4,62 +4,42 @@ metadata:
   name: whapps
 spec:
   replicas: 1
-  selector:
-    app: kazoo
-    project: valuphone
-    kazoo-app: whapps
   template:
     metadata:
       name: whapps
       labels:
         app: kazoo
-        otp-release: R15B
-        kazoo-app: whapps
+        kazoo-app: whistle_apps
         project: valuphone
-        role: whapps-server
+        environment: production
     spec:
       volumes:
         - name: erlang-cookie-secret
           secret:
             secretName: erlang-cookie
-        - name: bigcouch-admin-secret
-          secret:
-            secretName: bigcouch-admin-secret
-        # - name: api-tls
-        #   secret:
-        #     secretName: api-tls
       containers:
         - name: whapps
           image: callforamerica/kazoo
           env:
             - name: KAZOO_APP
-              value: whapps
+              value: whistle_apps
+            - name: KAZOO_LOG_LEVEL
+              value: debug
+            - name: KUBERNETES_HOSTNAME_FIX
+              value: 'true'
             - name: DATACENTER
               value: sl
             - name: REGION
-              value: east 
-            - name: KAZOO_LOGLEVEL
-              value: debug
-            - name: TLS_ENABLED
-              value: 'true'
+              value: east
           imagePullPolicy: Always
           volumeMounts:
             - name: erlang-cookie-secret
               readOnly: true
               mountPath: /etc/secrets/erlang
-            - name: bigcouch-admin-secret
-              readOnly: true
-              mountPath: /etc/secrets/bigcouch
-            # - name: api-tls
-            #   readOnly: true
-            #   mountPath: /etc/secrets/tls
           ports:
             - name: crossbar
               protocol: TCP
               containerPort: 8000
-            - name: crossbar-tls
-              protocol: TCP
-              containerPort: 8443
           resources:
             requests: 
               cpu: 2

@@ -1,116 +1,128 @@
 #!/bin/bash
 
-# args: 1=service
-get_endpoint_ips() {
-    local SERVICE=$1
-    local TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
-    local HOST=$(dig +short +search kubernetes)
-    local ENDPOINTS=$(curl -sSL -k -H "Authorization: Bearer $TOKEN" https://$HOST/api/v1/endpoints | jq -r ".items[] | select(.metadata.name == \"${SERVICE}\") | .subsets[] | .addresses[] | .ip")
-    echo "$ENDPOINTS"
-}
+set -e
 
-get_amqp_uri() {
-    local AMQP_HOST=$(dig +short +search rabbitmq)
-    local AMQP_PORT=$(dig +short +search SRV _amqp._tcp.rabbitmq | awk '{print $3}')
-    local AMQP_URI="amqp://guest:guest@${AMQP_HOST}:${AMQP_PORT}"
-    echo $AMQP_URI
-}
+. ~/.bashrc
 
-get_service_host() {
-    local SERVICE=$1
-    local SERVICE_HOST=$(dig +short +search $SERVICE)
-    echo $SERVICE_HOST
-}
+: ${KAZOO_APP:=whistle_apps}
 
-# args:
-#   1: service
-#   2: protocol
-#   3. portname
-get_service_port() {
-    local SERVICE=$1
-    local PROTOCOL=$2
-    local PORTNAME=$3
-    local PORT=$(dig +short +search SRV _${PORTNAME}._${PROTOCOL}.${SERVICE} | awk '{print $3}')
-    echo $PORT
-}
+: ${KAZOO_THREADS:=25}
 
-get_bigcouch_secret() {
-    if [ -f '/etc/secrets/bigcouch/secret' ]; then
-        local SECRET=$(cat /etc/secrets/bigcouch/secret)
-    else
-        local SECRET=some-horrible-default
+# options: debug info notice warning error critical alert emergency
+: ${KAZOO_LOG_LEVEL:=info}
+: ${KAZOO_LOG_COLOR:=true}
+
+# options: error progress all
+: ${KAZOO_SASL_ERRLOG_TYPE:=error}
+: ${KAZOO_SASL_ERROR_LOGGER:=tty}
+
+: ${DATACENTER:=dev}
+: ${REGION:=local}
+: ${KAZOO_ZONE:=${REGION}-${DATACENTER}}
+
+: ${BIGCOUCH_COMPACT_AUTOMATICALLY:=true}
+: ${BIGCOUCH_DATA_PORT:=5984}
+: ${BIGCOUCH_ADMIN_PORT:=5986}
+
+
+if [ "$KUBERNETES_HOSTNAME_FIX" == true ]; then
+    echo "Applying kubernetes hostname fix ..."
+
+    if [ -z "$(cat /etc/hosts | grep $HOSTNAME)" ]; then
+        echo "127.0.0.1    $(hostname -f)    $(hostname)" >> /etc/hosts
+        echo "::1    $(hostname -f)    $(hostname)" >> /etc/hosts
+        echo "$(hostname -i | head -n 1)    $(hostname -f)    $(hostname)" >> /etc/hosts
     fi
-    echo "$SECRET"
-}
 
-link_erlang_cookie() {
-    if [ -f '/etc/secrets/erlang/cookie' ]; then
-        echo "Linking Erlang Cookie"
-        cookie=$(cat /etc/secrets/erlang/cookie)
-        # yes | cp -rf /etc/secrets/erlang/cookie ~/.erlang.cookie
-    else
-        echo "*** No Erlang Cookie Mounted! ***"
-        cookie=insecure-cookie
-        # echo insecure-cookie > ~/.erlang.cookie
-        # chown kazoo:kazoo ~/.erlang.cookie
-        # chmod 0600 ~/.erlang.cookie
-    fi
-    echo "$cookie" > ~/.erlang.cookie
-    chown kazoo:kazoo ~/.erlang.cookie
-    chmod 0600 ~/.erlang.cookie
-}
+    echo "$HOSTNAME" > /etc/hostname
 
-get_erlang_cookie() {
-    local COOKIE=$(cat ~/.erlang.cookie)
-    echo "$COOKIE"
-}
-
-echo "Grabbing Environment Vars ..."
-
-DATACENTER=${DATACENTER:-dev}
-REGION=${REGION:-local}
-DEFAULT_KAZOO_ZONE="${REGION}-${DATACENTER}"
-KAZOO_ZONE=${KAZOO_ZONE:-$DEFAULT_KAZOO_ZONE}
-KAZOO_LOGLEVEL=${KAZOO_LOGLEVEL:-info}
-
-
-echo "Getting Erlang Cookie ..."
-link_erlang_cookie
-ERLANG_COOKIE=$(get_erlang_cookie)
-
-
-echo "Getting AMQP URI ..."
-AMQP_URI=$(get_amqp_uri)
-
-
-echo "Getting Bigcouch Details ..."
-BIGCOUCH_HOST=$(get_service_host 'bigcouchbal')
-BIGCOUCH_DATA_PORT=5984
-BIGCOUCH_ADMIN_PORT=5986
-BIGCOUCH_USER=${BIGCOUCH_USER:-admin}
-BIGCOUCH_SECRET=$(get_bigcouch_secret)
-
-if [ "$BIGCOUCH_SECRET" == 'some-horrible-default' ]; then
-    echo "*** No secret file found at /etc/secrets/bigcouch/secret, using insecure backup ***"
-else
-    echo "Admin secret successfuly read from secret volume file ..."
+    echo -e "
+    HOSTNAME: $HOSTNAME
+    which: $(which hostname)
+    Container IP: $(hostname -i)
+    Container Host: $(hostname)
+    Container FQDN: $(hostname -f)
+    "
 fi
 
-echo "Writing /etc/kazoo/config.ini ..."
+
+echo "Setting environment specific services ..."
+if [ "$ENVIRONMENT" == "local" ]; then
+    AMQP_URI="amqp://guest:guest@$(dig +short rabbitmq | head -n 1):5672"
+    BIGCOUCH_IP=$(dig +short bigcouch | head -n 1)
+else
+    AMQP_URI="amqp://guest:guest@$(dig +short +search rabbitmq):5672"
+    BIGCOUCH_IP=$(dig +short +search bigcouchbal)
+fi
+
+
+echo "Reading erlang cookie ..."
+if [ -f '/etc/secrets/erlang/cookie' ]; then
+    echo "Cookie secret mounted ..."
+    ERLANG_COOKIE=$(cat /etc/secrets/erlang/cookie)
+else
+    echo "*** No Erlang Cookie Mounted! ***"
+    ERLANG_COOKIE=insecure-cookie
+fi
+echo "$ERLANG_COOKIE" > ~/.erlang.cookie
+
+
+echo "Creating erl_pipes ..."
+mkdir -p /tmp/erl_pipes/$KAZOO_APP
+
+
+echo "Removing file based loggers since we're in docker ..."
+tee /etc/kazoo/app.config <<EOF
+[
+ {lager, [
+          {handlers, [
+                      {lager_console_backend, info}
+                     ]},
+          {colored, ${KAZOO_LOG_COLOR}}
+         ,{error_logger_hwm, 500}
+         ]}
+].
+EOF
+
+
+echo "Configuring vm.args ..."
+tee /etc/kazoo/vm.args <<EOF
+# Tell SASL not to log progress reports, and log SASL errors to a file
+-sasl errlog_type $KAZOO_SASL_ERRLOG_TYPE
+-sasl sasl_error_logger $KAZOO_SASL_ERROR_LOGGER
+-boot start_sasl
+
+-config /etc/kazoo/app.config
+
+# Use kernel poll functionality if supported by emulator
++K true
+
+# Start a pool of asynchronous IO threads
++A $KAZOO_THREADS
+
+-kernel inet_dist_listen_min 11500 inet_dist_listen_max 11999
+
+# Comment this line out if you want the Erlang shell
++Bd
+
+# Treat error_logger:warning_msg/2 as warnings instead of errors (default)
++W w
+EOF
+
+
+echo "Writing kazoo config.ini ..."
 tee  /etc/kazoo/config.ini <<EOF
 [zone]
 name = "$KAZOO_ZONE"
 amqp_uri = "$AMQP_URI"
 
 [bigcouch]
-compact_automatically = true
-ip = "$BIGCOUCH_HOST"
+compact_automatically = $BIGCOUCH_COMPACT_AUTOMATICALLY
+ip = "$BIGCOUCH_IP"
 port = $BIGCOUCH_DATA_PORT
 admin_port = $BIGCOUCH_ADMIN_PORT
 zone = "$KAZOO_ZONE"
 cookie = $ERLANG_COOKIE
-;username = "$BIGCOUCH_USER"
-;password = "$BIGCOUCH_SECRET"
 
 [whistle_apps]
 zone = "$KAZOO_ZONE"
@@ -121,42 +133,20 @@ zone = "$KAZOO_ZONE"
 cookie = $ERLANG_COOKIE
 
 [log]
-console = $KAZOO_LOGLEVEL
-file = error
+console = $KAZOO_LOG_LEVEL
 EOF
 
-if [ -n "$KUBERNETES_HOSTNAME_FIX" ]; then
-    echo "Applying kubernetes hostname fix"
-    ln -sf /opt/kazoo/bin/hostname-fix /opt/kazoo/bin/hostname
-    chown kazoo:kazoo /opt/kazoo/bin/hostname
-    export HOSTNAME=$(/opt/kazoo/bin/hostname-fix)
-    echo "127.0.0.1    $HOSTNAME" >> /etc/hosts
-fi
 
-if [ "$TLS_ENABLED" ]; then
-    if [ -d /etc/secrets/tls ]; then
-        echo "Linking SSL Certs ..."
-        ln -sf /etc/secrets/tls /opt/kazoo/applications/crossbar/priv/ssl
-    fi
-fi
+echo "Ensuring permissions ..."
+chown -R kazoo:kazoo ~ /etc/kazoo
+chown -R kazoo:kazoo /tmp/erl_pipes/$KAZOO_APP
+chown kazoo:kazoo ~/.erlang.cookie
+chmod 0600 ~/.erlang.cookie
 
-echo "Finished setting up Kazoo Environment ..."
 
-KAZOO_APP=${KAZOO_APP:-whapps}
-if [ "$KAZOO_APP" == 'whapps' ]; then
-    ERLANG_METHOD=whistle_apps
-    ERLANG_NODE=whistle_apps
-elif [ "$KAZOO_APP" == 'ecallmgr' ]; then
-    ERLANG_METHOD=ecallmgr
-    ERLANG_NODE=ecallmgr
-else
-    echo "Maybe you should figure out what you want first ..."
-    exit 1
-fi
-
-echo "Starting $ERLANG_METHOD using node: $ERLANG_NODE@$(env hostname -f)"
-export ERL_CRASH_DUMP=$(date +%s)_${ERLANG_NODE}_erl_crash.dump
+echo "Starting $KAZOO_APP using node: $KAZOO_APP@$(env hostname -f)"
+export ERL_CRASH_DUMP=$(date +%s)_${KAZOO_APP}_erl_crash.dump
 export ERL_LIBS=${HOME}/deps:${HOME}/core:${HOME}/applications:$ERL_LIBS
 
 cd ~ 
-    su kazoo -c "exec erl -name ${ERLANG_NODE}@$(env hostname -f) -args_file /etc/kazoo/vm.args -noshell -s $ERLANG_METHOD 2>&1"
+    su kazoo -c "exec erl -name ${KAZOO_APP}@$(env hostname -f) -args_file /etc/kazoo/vm.args -noshell -s $KAZOO_APP 2>&1"

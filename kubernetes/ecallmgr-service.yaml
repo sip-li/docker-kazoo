@@ -2,18 +2,14 @@ kind: Service
 apiVersion: v1
 metadata: 
   name: ecallmgr
-  labels:
-    app: kazoo
-    kazoo-app: ecallmgr
-    opt-release: R15B
-    role: call-manager
 spec:
   selector:
     app: kazoo
-    project: valuphone
     kazoo-app: ecallmgr
+    project: valuphone
+    environment: production
   clusterIP: None
   ports: 
-    - name: placeholder
+    - name: none
       protocol: TCP
-      port: 64000
+      port: 0

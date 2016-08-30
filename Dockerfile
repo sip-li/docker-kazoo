@@ -6,24 +6,27 @@ LABEL   os="linux" \
         os.distro="centos" \
         os.version="6"
 
-LABEL   app.name="kazoo" \
-        app.version="3"
+LABEL   lang.name="erlang" \
+        lang.version="R15B03"
 
-ENV     TERM=xterm
+LABEL   app.name="kazoo" \
+        app.version="3.22"
+
+ENV     ERLANG_VERSION=R15B03 \
+        KAZOO_VERSION=3.22
+
+ENV     HOME=/opt/kazoo
+ENV     PATH=$HOME/bin:$PATH
 
 COPY    setup.sh /tmp/setup.sh
 RUN     /tmp/setup.sh
 
 COPY    entrypoint /usr/bin/entrypoint
 
-ENV     HOME=/opt/kazoo \
-        PATH=/opt/kazoo/bin:$PATH \
-        KUBERNETES_HOSTNAME_FIX=true \
-        KAZOO_USE_LONGNAME=true
+ENV     KAZOO_APP=whistle_apps \
+        KAZOO_LOG_LEVEL=info
 
-VOLUME  ["/opt/kazoo"]
-
-EXPOSE  4369 8000 8443 11500-11999
+EXPOSE  4369 8000 11500-11999
 
 # USER    kazoo
 

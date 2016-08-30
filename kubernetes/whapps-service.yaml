@@ -2,16 +2,12 @@ kind: Service
 apiVersion: v1
 metadata: 
   name: whapps
-  labels:
-    app: kazoo
-    kazoo-app: whapps
-    opt-release: R15B
-    role: whapp-server
 spec:
   selector:
     app: kazoo
     project: valuphone
-    kazoo-app: whapps
+    environment: production
+    kazoo-app: whistle_apps
   type: ClusterIP
   ports:
     - name: crossbar

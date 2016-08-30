@@ -4,19 +4,14 @@ metadata:
   name: ecallmgr
 spec:
   replicas: 1
-  selector:
-    app: kazoo
-    project: valuphone
-    kazoo-app: ecallmgr
   template:
     metadata:
       name: ecallmgr
       labels:
         app: kazoo
-        otp-release: R15B
         kazoo-app: ecallmgr
         project: valuphone
-        role: whapps-server
+        environment: production
     spec:
       volumes:
         - name: erlang-cookie-secret
@@ -27,13 +22,15 @@ spec:
           image: callforamerica/kazoo
           env:
             - name: KAZOO_APP
-              value: ecallmgr
+              value: whistle_apps
+            - name: KAZOO_LOG_LEVEL
+              value: debug
+            - name: KUBERNETES_HOSTNAME_FIX
+              value: 'true'
             - name: DATACENTER
               value: sl
             - name: REGION
-              value: east 
-            - name: KAZOO_LOGLEVEL
-              value: info
+              value: east
           imagePullPolicy: Always
           volumeMounts:
             - name: erlang-cookie-secret
@@ -46,7 +43,4 @@ spec:
             # limits:
             #   cpu:
             #   memory:
-
-        # - name: dns
-        #   image: callforamerica/go-dnsmasq
       restartPolicy: Always
