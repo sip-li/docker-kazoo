@@ -49,7 +49,7 @@ fi
 echo "Setting environment specific services ..."
 if [ "$ENVIRONMENT" == "local" ]; then
     AMQP_URI="amqp://guest:guest@$(dig +short rabbitmq | head -n 1):5672"
-    BIGCOUCH_IP=$(dig +short bigcouch | head -n 1)
+    BIGCOUCH_IP=$(dig +short bigcouch.local | head -n 1)
 else
     AMQP_URI="amqp://guest:guest@$(dig +short +search rabbitmq):5672"
     BIGCOUCH_IP=$(dig +short +search bigcouchbal)

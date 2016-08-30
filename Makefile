@@ -50,15 +50,15 @@ shell-ecallmgr:
 run:
 	@docker run -it --rm --name $(NAME) --entrypoint bash $(LOCAL_TAG)
 
-launch:
-	@docker run -d --name $(NAME) -h $(NAME) -e "ENVIRONMENT=local" -p "8000:8000" $(LOCAL_TAG)
-
 launch-deps:
 	-cd ../docker-rabbitmq && make launch-net
 	-cd ../docker-bigcouch && make launch-net
 
+launch:
+	@docker run -d --name $(NAME) -h $(NAME) -e "ENVIRONMENT=local" -p "8000:8000" $(LOCAL_TAG)
+
 launch-net:
-	@docker run -d --name $(NAME) -h whapps.cluster.local -e "ENVIRONMENT=local" -e "KAZOO_LOG_LEVEL=debug" --network=local --net-alias=whapps.cluster.local $(LOCAL_TAG)
+	@docker run -d --name $(NAME) -h whapps.local -e "ENVIRONMENT=local" -e "KAZOO_LOG_LEVEL=debug" -p "8000:8000" --network=local --net-alias=whapps.local $(LOCAL_TAG)
 
 whapps:
 	$(MAKE) launch
@@ -70,7 +70,7 @@ ecallmgr:
 	@docker run -d --name $(NAME) -e "KAZOO_APP=ecallmgr" -e "ENVIRONMENT=local" -p "8000:8000" $(LOCAL_TAG)
 
 ecallmgr-net:
-	@docker run -d --name $(NAME)-ecallmgr -h ecallmgr.cluster.local -e "KAZOO_APP=ecallmgr"  -e "ENVIRONMENT=local" --network=local --net-alias ecallmgr.cluster.local $(LOCAL_TAG)
+	@docker run -d --name $(NAME)-ecallmgr -h ecallmgr.local -e "KAZOO_APP=ecallmgr"  -e "ENVIRONMENT=local" --network=local --net-alias ecallmgr.local $(LOCAL_TAG)
 
 create-network:
 	@docker network create -d bridge local
