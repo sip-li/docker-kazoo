@@ -13,7 +13,6 @@ spec:
         project: valuphone
         environment: production
     spec:
-      minReadySeconds: 60
       volumes:
         - name: erlang-cookie-secret
           secret:
@@ -41,10 +40,16 @@ spec:
             - name: crossbar
               protocol: TCP
               containerPort: 8000
+            - name: ws-tcp
+              protocol: TCP
+              containerPort: 5555
+            - name: ws-udp
+              protocol: UDP
+              containerPort: 5555
           resources:
             requests: 
-              cpu: 2
-              memory: 2G
+              cpu: 3
+              memory: 3G
             # limits:
             #   cpu:
             #   memory:

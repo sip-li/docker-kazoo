@@ -20,9 +20,13 @@ set -e
 : ${REGION:=local}
 : ${KAZOO_ZONE:=${REGION}-${DATACENTER}}
 
+: ${BIGCOUCH_HOST:=bigcouchbal}
 : ${BIGCOUCH_COMPACT_AUTOMATICALLY:=true}
 : ${BIGCOUCH_DATA_PORT:=5984}
 : ${BIGCOUCH_ADMIN_PORT:=5986}
+
+: ${KAZOO_AMQP_HOST:=rabbitmq-alpha}
+: ${KAZOO_SECONDARY_AMQP_HOST:=rabbitmq-beta}
 
 
 if [ "$KUBERNETES_HOSTNAME_FIX" == true ]; then
@@ -46,14 +50,16 @@ if [ "$KUBERNETES_HOSTNAME_FIX" == true ]; then
 fi
 
 
-echo "Setting environment specific services ..."
-if [ "$ENVIRONMENT" == "local" ]; then
-    AMQP_URI="amqp://guest:guest@$(dig +short rabbitmq | head -n 1):5672"
-    BIGCOUCH_IP=$(dig +short bigcouch.local | head -n 1)
-else
-    AMQP_URI="amqp://guest:guest@$(dig +short +search rabbitmq):5672"
-    BIGCOUCH_IP=$(dig +short +search bigcouchbal)
-fi
+# echo "Setting environment specific services ..."
+# if [ "$ENVIRONMENT" == "local" ]; then
+#     # AMQP_URI="amqp://guest:guest@$(dig +short rabbitmq | head -n 1):5672"
+#     # BIGCOUCH_IP=$(dig +short bigcouch.local | head -n 1)
+#     BIGCOUCH_IP=bigcouch.local
+# else
+#     # AMQP_URI="amqp://guest:guest@$(dig +short +search rabbitmq):5672"
+#     BIGCOUCH_IP=$(dig +short +search bigcouchbal)
+#     BIGCOUCH_IP=bigcouchbal
+# fi
 
 
 echo "Reading erlang cookie ..."
@@ -109,16 +115,18 @@ tee /etc/kazoo/vm.args <<EOF
 +W w
 EOF
 
+# AMQP_URI="amqp://guest:guest@$(dig +short rabbitmq | head -n 1):5672"
 
 echo "Writing kazoo config.ini ..."
 tee  /etc/kazoo/config.ini <<EOF
 [zone]
 name = "$KAZOO_ZONE"
-amqp_uri = "$AMQP_URI"
+amqp_uri = "amqp://guest:guest@$KAZOO_AMQP_HOST:5672"
+amqp_uri = "amqp://guest:guest@$KAZOO_SECONDARY_AMQP_HOST:5672"
 
 [bigcouch]
 compact_automatically = $BIGCOUCH_COMPACT_AUTOMATICALLY
-ip = "$BIGCOUCH_IP"
+ip = "$BIGCOUCH_HOST"
 port = $BIGCOUCH_DATA_PORT
 admin_port = $BIGCOUCH_ADMIN_PORT
 zone = "$KAZOO_ZONE"

@@ -14,3 +14,11 @@ spec:
       protocol: TCP
       port: 8000
       targetPort: 8000
+    - name: ws-tcp
+      protocol: TCP
+      port: 5555
+      targetPort: 5555
+    - name: ws-udp
+      protocol: UDP
+      port: 5555
+      targetPort: 5555

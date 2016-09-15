@@ -38,8 +38,8 @@ spec:
               mountPath: /etc/secrets/erlang
           resources:
             requests: 
-              cpu: 2
-              memory: 2G
+              cpu: 3
+              memory: 3G
             # limits:
             #   cpu:
             #   memory:

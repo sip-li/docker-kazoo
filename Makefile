@@ -58,7 +58,7 @@ launch:
 	@docker run -d --name $(NAME) -h $(NAME) -e "ENVIRONMENT=local" -p "8000:8000" $(LOCAL_TAG)
 
 launch-net:
-	@docker run -d --name $(NAME) -h whapps.local -e "ENVIRONMENT=local" -e "KAZOO_LOG_LEVEL=debug" -p "8000:8000" --network=local --net-alias=whapps.local $(LOCAL_TAG)
+	@docker run -d --name $(NAME) -h whapps.local -e "BIGCOUCH_HOST=bigcouch.local" -e "KAZOO_LOG_LEVEL=debug" -p "8000:8000" --network=local --net-alias=whapps.local $(LOCAL_TAG)
 
 whapps:
 	$(MAKE) launch
@@ -112,6 +112,10 @@ rmi:
 	@docker rmi $(LOCAL_TAG)
 	@docker rmi $(REMOTE_TAG)
 
+kube-deploy-service:
+	@$(MAKE) kube-deploy-service-whapps
+	@$(MAKE) kube-deploy-service-ecallmgr
+
 kube-deploy-whapps:
 	@kubectl create -f kubernetes/whapps-deployment.yaml --record
 
@@ -137,35 +141,56 @@ kube-deploy-service-whapps:
 kube-delete-service-whapps:
 	@kubectl delete svc whapps
 
-kube-replace-service-whapps:
-	@kubectl replace -f kubernetes/whapps-service.yaml
+kube-apply-service-whapps:
+	@kubectl apply -f kubernetes/whapps-service.yaml
 
 kube-deploy-ecallmgr:
 	@kubectl create -f kubernetes/ecallmgr-deployment.yaml --record
 
-kube-deploy-edit:
+kube-deploy-edit-ecallmgr:
 	@kubectl edit deployment/ecallmgr
 	$(NAME) kube-rollout-status
 
-kube-deploy-rollback:
+kube-deploy-rollback-ecallmgr:
 	@kubectl rollout undo deployment/ecallmgr
 
-kube-rollout-status:
+kube-rollout-status-ecallmgr:
 	@kubectl rollout status deployment/ecallmgr
 
-kube-rollout-history:
+kube-rollout-history-ecallmgr:
 	@kubectl rollout history deployment/ecallmgr
 
-kube-delete-deployment:
+kube-delete-deployment-ecallmgr:
 	@kubectl delete deployment/ecallmgr
 
-kube-deploy-service:
+kube-deploy-service-ecallmgr:
 	@kubectl create -f kubernetes/ecallmgr-service.yaml
 
-kube-delete-service:
+kube-delete-service-ecallmgr:
 	@kubectl delete svc ecallmgr
 
-kube-replace-service:
-	@kubectl replace -f kubernetes/ecallmgr-service.yaml	
+kube-apply-service-ecallmgr:
+	@kubectl apply -f kubernetes/ecallmgr-service.yaml	
+
+kube-logsf-whapps:
+	@kubectl logs -f $(shell kubectl get po | grep whapps | cut -d' ' -f1)
+
+kube-logsft-whapps:
+	@kubectl logs -f --tail=25 $(shell kubectl get po | grep whapps | cut -d' ' -f1)
+
+kube-shell-whapps:
+	@kubectl exec -ti $(shell kubectl get po | grep whapps | cut -d' ' -f1) -- bash
+
+kube-logsf-ecallmgr:
+	@kubectl logs -f $(shell kubectl get po | grep ecallmgr | cut -d' ' -f1)
+
+kube-logsft-ecallmgr:
+	@kubectl logs -f --tail=25 $(shell kubectl get po | grep ecallmgr | cut -d' ' -f1)
+
+kube-shell-ecallmgr:
+	@kubectl exec -ti $(shell kubectl get po | grep ecallmgr | cut -d' ' -f1) -- bash
+
+whistle-maint-nodes:
+	kubectl exec $(shell kubectl get po | grep whapps | cut -d' ' -f1) -- sup -h "$$(hostname)" whistle_maintenance nodes
 
 default: build

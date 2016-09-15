@@ -13,7 +13,6 @@ spec:
         project: valuphone
         environment: production
     spec:
-      minReadySeconds: 60
       volumes:
         - name: erlang-cookie-secret
           secret:
@@ -23,7 +22,7 @@ spec:
           image: callforamerica/kazoo
           env:
             - name: KAZOO_APP
-              value: whistle_apps
+              value: ecallmgr
             - name: KAZOO_LOG_LEVEL
               value: debug
             - name: KUBERNETES_HOSTNAME_FIX
@@ -39,8 +38,8 @@ spec:
               mountPath: /etc/secrets/erlang
           resources:
             requests: 
-              cpu: 2
-              memory: 2G
+              cpu: 3
+              memory: 3G
             # limits:
             #   cpu:
             #   memory:
