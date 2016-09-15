@@ -2,7 +2,8 @@
 
 set -e
 
-KAZOO_RELEASE=R15B
+: ${MONSTER_UI_VERSION:=3.22}
+: ${KAZOO_RELEASE:=R15B}
 
 
 echo "Creating user and group for kazoo ..."
@@ -44,12 +45,27 @@ yum -y install \
 
 
 echo "Installing kazoo ..."
-yum -y install kazoo-${KAZOO_RELEASE} monster-ui*
+yum -y install kazoo-${KAZOO_RELEASE}
 
 
-echo "Installing api-explorer ..."
-cd /var/www/html/monster-ui/apps
-	git clone https://github.com/siplabs/monster-ui-apiexplorer apiexplorer
+echo "Creating monsterui home directory ..."
+mkdir -p ~ /var/www/html
+
+
+echo "Installing monster-ui ..."
+cd /var/www/html
+	git clone -b $MONSTER_UI_VERSION https://github.com/2600hz/monster-ui
+
+	echo "Installing monster-ui apps ..."
+	cd monster-ui/apps
+		git clone -b $MONSTER_UI_VERSION https://github.com/2600hz/monster-ui-callflows callflows
+		git clone -b $MONSTER_UI_VERSION https://github.com/2600hz/monster-ui-voip voip
+		git clone -b $MONSTER_UI_VERSION https://github.com/2600hz/monster-ui-pbxs pbxs
+		git clone -b $MONSTER_UI_VERSION https://github.com/2600hz/monster-ui-accounts accounts
+		git clone -b $MONSTER_UI_VERSION https://github.com/2600hz/monster-ui-webhooks webhooks
+		git clone -b $MONSTER_UI_VERSION https://github.com/2600hz/monster-ui-numbers numbers
+		git clone https://github.com/siplabs/monster-ui-apiexplorer apiexplorer
+		cd ~
 
 
 echo "Installing JQ ..."
@@ -125,7 +141,7 @@ EOF
 
 
 echo "Setting Ownership & Permissions ..."
-chown -R kazoo:kazoo ~ /var/run/kazoo
+chown -R kazoo:kazoo ~ /var/run/kazoo /var/www/html
 
 chmod +x \
 	~/.bashrc \

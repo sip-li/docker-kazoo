@@ -54,6 +54,10 @@ launch-deps:
 	-cd ../docker-rabbitmq && make launch-net
 	-cd ../docker-bigcouch && make launch-net
 
+kill-deps:
+	-cd ../docker-rabbitmq && make kill && make rm
+	-cd ../docker-bigcouch && make kill && make rm
+
 launch:
 	@docker run -d --name $(NAME) -h $(NAME) -e "ENVIRONMENT=local" -p "8000:8000" $(LOCAL_TAG)
 
@@ -74,6 +78,15 @@ ecallmgr-net:
 
 create-network:
 	@docker network create -d bridge local
+
+init-account:
+	@docker exec $(NAME) sup crossbar_maintenance create_account valuphone localhost admin kazootest
+
+init-apps:
+	@docker exec $(NAME) sup crossbar_maintenance init_apps /var/www/html/monster-ui/apps http://localhost:8000/v2
+
+get-master-account:
+	@docker exec $(NAME) sup crossbar_maintenance find_account_by_name valuphone
 
 logs:
 	@docker logs $(NAME)
