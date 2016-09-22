@@ -1,6 +1,6 @@
 NS = vp
 NAME = kazoo
-APP_VERSION = 3.22
+APP_VERSION = 4.0
 IMAGE_VERSION = 2.0
 VERSION = $(APP_VERSION)-$(IMAGE_VERSION)
 LOCAL_TAG = $(NS)/$(NAME):$(VERSION)
@@ -44,9 +44,6 @@ push:
 shell:
 	@docker exec -ti $(NAME) /bin/bash
 
-shell-ecallmgr:
-	@docker exec -ti $(NAME)-ecallmgr /bin/bash
-
 run:
 	@docker run -it --rm --name $(NAME) --entrypoint bash $(LOCAL_TAG)
 
@@ -59,28 +56,16 @@ kill-deps:
 	-cd ../docker-bigcouch && make kill && make rm
 
 launch:
-	@docker run -d --name $(NAME) -h $(NAME) -e "ENVIRONMENT=local" -p "8000:8000" $(LOCAL_TAG)
+	@docker run -d --name $(NAME) -h $(NAME) -p "8000:8000" $(LOCAL_TAG)
 
 launch-net:
-	@docker run -d --name $(NAME) -h whapps.local -e "BIGCOUCH_HOST=bigcouch.local" -e "KAZOO_LOG_LEVEL=debug" -p "8000:8000" --network=local --net-alias=whapps.local $(LOCAL_TAG)
-
-whapps:
-	$(MAKE) launch
-
-whapps-net:
-	$(MAKE) launch-net
-
-ecallmgr:
-	@docker run -d --name $(NAME) -e "KAZOO_APP=ecallmgr" -e "ENVIRONMENT=local" -p "8000:8000" $(LOCAL_TAG)
-
-ecallmgr-net:
-	@docker run -d --name $(NAME)-ecallmgr -h ecallmgr.local -e "KAZOO_APP=ecallmgr"  -e "ENVIRONMENT=local" --network=local --net-alias ecallmgr.local $(LOCAL_TAG)
+	@docker run -d --name $(NAME) -h $(NAME).local -e "BIGCOUCH_HOST=bigcouch.local" -e "KAZOO_LOG_LEVEL=debug" -p "8000:8000" --network=local --net-alias=$(NAME).local $(LOCAL_TAG)
 
 create-network:
 	@docker network create -d bridge local
 
 init-account:
-	@docker exec $(NAME) sup crossbar_maintenance create_account valuphone localhost admin kazootest
+	@docker exec $(NAME) sup crossbar_maintenance create_account valuphone localhost admin test
 
 init-apps:
 	@docker exec $(NAME) sup crossbar_maintenance init_apps /var/www/html/monster-ui/apps http://localhost:8000/v2
@@ -91,14 +76,8 @@ get-master-account:
 logs:
 	@docker logs $(NAME)
 
-logsf-whapps:
-	@docker logs -f $(NAME)
-
-logsf-ecallmgr:
-	@docker logs -f $(NAME)-ecallmgr
-
 logsf:
-	$(MAKE) logsf-whapps
+	@docker logs -f $(NAME)
 
 start:
 	@docker start $(NAME)
@@ -106,104 +85,54 @@ start:
 kill:
 	@docker kill $(NAME)
 
-kill-ecallmgr:
-	@docker kill $(NAME)-ecallmgr
-
 stop:
 	@docker stop $(NAME)
 
-stop-ecallmgr:
-	@docker stop $(NAME)-callmgr
-
 rm:
 	@docker rm $(NAME)
-
-rm-ecallmgr:
-	@docker rm $(NAME)-ecallmgr
 
 rmi:
 	@docker rmi $(LOCAL_TAG)
 	@docker rmi $(REMOTE_TAG)
 
 kube-deploy-service:
-	@$(MAKE) kube-deploy-service-whapps
-	@$(MAKE) kube-deploy-service-ecallmgr
+	@kubectl create -f kubernetes/$(NAME)-service.yaml
 
-kube-deploy-whapps:
-	@kubectl create -f kubernetes/whapps-deployment.yaml --record
+kube-deploy:
+	@kubectl create -f kubernetes/$(NAME)-deployment.yaml --record
 
-kube-deploy-edit-whapps:
-	@kubectl edit deployment/whapps
+kube-deploy-edit:
+	@kubectl edit deployment/$(NAME)
 	$(NAME) kube-rollout-status
 
-kube-deploy-rollback-whapps:
-	@kubectl rollout undo deployment/whapps
+kube-deploy-rollback:
+	@kubectl rollout undo deployment/$(NAME)
 
-kube-rollout-status-whapps:
-	@kubectl rollout status deployment/whapps
+kube-rollout-status:
+	@kubectl rollout status deployment/$(NAME)
 
-kube-rollout-history-whapps:
-	@kubectl rollout history deployment/whapps
+kube-rollout-history:
+	@kubectl rollout history deployment/$(NAME)
 
-kube-delete-deployment-whapps:
-	@kubectl delete deployment/whapps
+kube-delete-deployment:
+	@kubectl delete deployment/$(NAME)
 
-kube-deploy-service-whapps:
-	@kubectl create -f kubernetes/whapps-service.yaml
+kube-delete-service:
+	@kubectl delete svc $(NAME)
 
-kube-delete-service-whapps:
-	@kubectl delete svc whapps
+kube-apply-service:
+	@kubectl apply -f kubernetes/$(NAME)-service.yaml
 
-kube-apply-service-whapps:
-	@kubectl apply -f kubernetes/whapps-service.yaml
+kube-logsf:
+	@kubectl logs -f $(shell kubectl get po | grep $(NAME) | cut -d' ' -f1)
 
-kube-deploy-ecallmgr:
-	@kubectl create -f kubernetes/ecallmgr-deployment.yaml --record
+kube-logsft:
+	@kubectl logs -f --tail=25 $(shell kubectl get po | grep $(NAME) | cut -d' ' -f1)
 
-kube-deploy-edit-ecallmgr:
-	@kubectl edit deployment/ecallmgr
-	$(NAME) kube-rollout-status
+kube-shell:
+	@kubectl exec -ti $(shell kubectl get po | grep $(NAME) | cut -d' ' -f1) -- bash
 
-kube-deploy-rollback-ecallmgr:
-	@kubectl rollout undo deployment/ecallmgr
-
-kube-rollout-status-ecallmgr:
-	@kubectl rollout status deployment/ecallmgr
-
-kube-rollout-history-ecallmgr:
-	@kubectl rollout history deployment/ecallmgr
-
-kube-delete-deployment-ecallmgr:
-	@kubectl delete deployment/ecallmgr
-
-kube-deploy-service-ecallmgr:
-	@kubectl create -f kubernetes/ecallmgr-service.yaml
-
-kube-delete-service-ecallmgr:
-	@kubectl delete svc ecallmgr
-
-kube-apply-service-ecallmgr:
-	@kubectl apply -f kubernetes/ecallmgr-service.yaml	
-
-kube-logsf-whapps:
-	@kubectl logs -f $(shell kubectl get po | grep whapps | cut -d' ' -f1)
-
-kube-logsft-whapps:
-	@kubectl logs -f --tail=25 $(shell kubectl get po | grep whapps | cut -d' ' -f1)
-
-kube-shell-whapps:
-	@kubectl exec -ti $(shell kubectl get po | grep whapps | cut -d' ' -f1) -- bash
-
-kube-logsf-ecallmgr:
-	@kubectl logs -f $(shell kubectl get po | grep ecallmgr | cut -d' ' -f1)
-
-kube-logsft-ecallmgr:
-	@kubectl logs -f --tail=25 $(shell kubectl get po | grep ecallmgr | cut -d' ' -f1)
-
-kube-shell-ecallmgr:
-	@kubectl exec -ti $(shell kubectl get po | grep ecallmgr | cut -d' ' -f1) -- bash
-
-whistle-maint-nodes:
-	kubectl exec $(shell kubectl get po | grep whapps | cut -d' ' -f1) -- sup -h "$$(hostname)" whistle_maintenance nodes
+kazoo-maint-nodes:
+	@kubectl exec $(shell kubectl get po | grep $(NAME) | cut -d' ' -f1) -- sup -h "$$(shell hostname)" kazoo_maintenance nodes
 
 default: build
