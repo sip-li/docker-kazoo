@@ -151,7 +151,7 @@ All of our docker-* repos in github have automatic build pipelines setup with do
 
 This repo resides at: [https://github.com/sip-li/docker-kazoo/tree/4.0](https://github.com/sip-li/docker-kazoo/tree/4.0) under the branch '4.0'.
 
-This image resides at: [https://hub.docker.com/r/callforamerica/kazoo](https://hub.docker.com/r/callforamerica/kazoo) under the tag `4`, and under docker using the shortform: `callforamerica/kazoo:4`
+This image resides at: [https://hub.docker.com/r/callforamerica/kazoo](https://hub.docker.com/r/callforamerica/kazoo) under the tag `4.0`, and under docker using the shortform: `callforamerica/kazoo:4.0`
 
 You can run this docker hub image using the following docker run command:
 
@@ -164,7 +164,7 @@ docker run -d \
     -e "RABBITMQ_HOST_B=rabbitmq-beta.local" \
     -e "KAZOO_LOG_LEVEL=debug" \
     -p "8000:8000" \
-    callforamerica/kazoo:4
+    callforamerica/kazoo:4.0
 ```
 
 Please use the Run Environment section above to determine which environment variables you will need to change here to get everything working correctly.
