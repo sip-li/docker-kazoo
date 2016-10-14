@@ -22,14 +22,17 @@ checkout:
 	@git checkout $(BUILD_BRANCH)
 
 build:
-	@docker build -t $(LOCAL_TAG) --rm .
-	$(MAKE) tag
+	@docker build -t $(LOCAL_TAG) --force-rm .
+	@$(MAKE) tag
+	@$(MAKE) dclean
 
 tag:
 	@docker tag $(LOCAL_TAG) $(REMOTE_TAG)
 
 rebuild:
-	@docker build -t $(LOCAL_TAG) --rm --no-cache .
+	@docker build -t $(LOCAL_TAG) --force-rm --no-cache .
+	@$(MAKE) tag
+	@$(MAKE) dclean
 
 test:
 	@rspec ./tests/*.rb
@@ -38,40 +41,48 @@ commit:
 	@git add -A .
 	@git commit
 
+dclean:
+	@-docker ps -aq | gxargs -I{} docker rm {} > /dev/null 2>&1 || true
+	@-docker images -f dangling=true -q | xargs docker rmi
+	@-docker volume ls -f dangling=true -q | xargs docker volume rm
+
 push:
 	@git push origin master
 
 shell:
-	@docker exec -ti $(NAME) /bin/bash
+	@docker exec -ti $(NAME) /bin/bash -l
 
 run:
 	@docker run -it --rm --name $(NAME) --entrypoint bash $(LOCAL_TAG)
 
 launch-deps:
-	-cd ../docker-rabbitmq && make launch-net
-	-cd ../docker-bigcouch && make launch-net
+	@-cd ../docker-rabbitmq && make launch-as-dep
+	@-cd ../docker-couchdb && make launch-as-dep
 
 kill-deps:
-	-cd ../docker-rabbitmq && make kill && make rm
-	-cd ../docker-bigcouch && make kill && make rm
+	@-cd ../docker-rabbitmq && make stop-as-dep && make rm-as-dep
+	@-cd ../docker-couchdb && make stop-as-dep && make rm-as-dep
 
 launch:
-	@docker run -d --name $(NAME) -h $(NAME) -p "8000:8000" $(LOCAL_TAG)
+	@docker run -d --name $(NAME) -h $(NAME).local --env-file default.env -p "8000:8000" $(LOCAL_TAG)
 
 launch-net:
-	@docker run -d --name $(NAME) -h $(NAME).local -e "BIGCOUCH_HOST=bigcouch.local" -e "KAZOO_LOG_LEVEL=debug" -p "8000:8000" --network=local --net-alias=$(NAME).local $(LOCAL_TAG)
+	@docker run -d --name $(NAME) -h $(NAME).local --env-file default.env -p "8000:8000" --network=local --net-alias=$(NAME).local $(LOCAL_TAG)
 
 create-network:
 	@docker network create -d bridge local
 
 init-account:
-	@docker exec $(NAME) sup crossbar_maintenance create_account valuphone localhost admin test
+	@docker exec $(NAME) sup crossbar_maintenance create_account test localhost admin kazootest
+
+load-media:
+	@docker exec $(NAME) sup kazoo_media_maintenance import_prompts /opt/kazoo/media/prompts/en/us en-us
 
 init-apps:
 	@docker exec $(NAME) sup crossbar_maintenance init_apps /var/www/html/monster-ui/apps http://localhost:8000/v2
 
-get-master-account:
-	@docker exec $(NAME) sup crossbar_maintenance find_account_by_name valuphone
+# get-master-account:
+# 	@docker exec $(NAME) sup crossbar_maintenance find_account_by_name valuphone
 
 logs:
 	@docker logs $(NAME)
@@ -95,6 +106,9 @@ rmi:
 	@docker rmi $(LOCAL_TAG)
 	@docker rmi $(REMOTE_TAG)
 
+rmf:
+	@docker rm -f $(NAME)
+
 kube-deploy-service:
 	@kubectl create -f kubernetes/$(NAME)-service.yaml
 
@@ -103,7 +117,7 @@ kube-deploy:
 
 kube-deploy-edit:
 	@kubectl edit deployment/$(NAME)
-	$(NAME) kube-rollout-status
+	@$(NAME) kube-rollout-status
 
 kube-deploy-rollback:
 	@kubectl rollout undo deployment/$(NAME)

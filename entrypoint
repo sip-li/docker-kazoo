@@ -1,14 +1,27 @@
-#!/bin/bash
+#!/bin/bash -l
 
 set -e
 
-. ~/.bashrc
+app=kazoo
+user=$app
+
+if [ -f /etc/default/$app ]
+then
+    . /etc/default/$app
+fi
+
+# This is the list of whapps that you want to autostart in this vm.
+: ${KAZOO_APPS:=blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks}
+
+: ${KAZOO_RELEASE:=$(cat ~/releases/RELEASES | head -1 | cut -d',' -f3 | xargs)}
+: ${ERTS_VERSION:=$(cat ~/releases/RELEASES | head -1 | cut -d',' -f4 | xargs)}
 
 : ${ERLANG_VM:=kazoo_apps}
+: ${ERLANG_THREADS:=64}
+: ${ERLANG_COOKIE:=insecure-cookie}
 
-: ${ERLANG_THREADS:=25}
-
-# options: debug info notice warning error critical alert emergency
+# options: debug info notice warning error
+#          critical alert emergency
 : ${KAZOO_LOG_LEVEL:=info}
 : ${KAZOO_LOG_COLOR:=true}
 
@@ -16,88 +29,84 @@ set -e
 : ${KAZOO_SASL_ERRLOG_TYPE:=error}
 : ${KAZOO_SASL_ERROR_LOGGER:=tty}
 
-: ${DATACENTER:=dev}
 : ${REGION:=local}
+: ${DATACENTER:=dev}
+
+# kazoo only works when zone is set to local
+# trying to figure out why only the local zone works
+KAZOO_ZONE=local
+
 : ${KAZOO_ZONE:=${REGION}-${DATACENTER}}
 
-: ${BIGCOUCH_HOST:=bigcouchbal}
-: ${BIGCOUCH_DATA_PORT:=5984}
-: ${BIGCOUCH_ADMIN_PORT:=5986}
-: ${BIGCOUCH_COMPACT_AUTOMATICALLY:=true}
+: ${COUCHDB_HOST:=couchdb-bal}
+: ${COUCHDB_DATA_PORT:=5984}
+: ${COUCHDB_ADMIN_PORT:=5986}
+: ${COUCHDB_COMPACT_AUTOMATICALLY:=true}
+: ${COUCHDB_USER:=admin}
+: ${COUCHDB_PASS:=secret}
 
-: ${KAZOO_AMQP_HOST:=rabbitmq-alpha}
-: ${KAZOO_SECONDARY_AMQP_HOST:=rabbitmq-beta}
+: ${RABBITMQ_USER:=guest}
+: ${RABBITMQ_PASS:=guest}
+: ${RABBITMQ_HOST_A:=rabbitmq-alpha}
+: ${RABBITMQ_HOST_B:=rabbitmq-beta}
+
+function log 
+{
+    local msg="$1"
+    echo -e "\E[36m[*]\E[0m ${msg}" 
+}
 
 
-if [ "$KUBERNETES_HOSTNAME_FIX" == true ]; then
-    echo "Applying kubernetes hostname fix ..."
-
-    if [ -z "$(cat /etc/hosts | grep $HOSTNAME)" ]; then
-        echo "127.0.0.1    $(hostname -f)    $(hostname)" >> /etc/hosts
-        echo "::1    $(hostname -f)    $(hostname)" >> /etc/hosts
-        echo "$(hostname -i | head -n 1)    $(hostname -f)    $(hostname)" >> /etc/hosts
-    fi
-
-    echo "$HOSTNAME" > /etc/hostname
-
-    echo -e "
-    HOSTNAME: $HOSTNAME
-    which: $(which hostname)
-    Container IP: $(hostname -i)
-    Container Host: $(hostname)
-    Container FQDN: $(hostname -f)
-    "
+if [[ $KUBERNETES_HOSTNAME_FIX = true ]]
+then
+    eval $(fix-kube-hostname enable)
 fi
 
 
-echo "Reading erlang cookie ..."
-if [ -f '/etc/secrets/erlang/cookie' ]; then
-    echo "Cookie secret mounted ..."
-    ERLANG_COOKIE=$(cat /etc/secrets/erlang/cookie)
-else
-    echo "*** No Erlang Cookie Mounted! ***"
-    ERLANG_COOKIE=insecure-cookie
-fi
-echo "$ERLANG_COOKIE" > ~/.erlang.cookie
+log "Writing erlang cookie ..."
+write-erlang-cookie
 
 
-echo "Creating erl_pipes ..."
-mkdir -p /tmp/erl_pipes/$ERLANG_VM /var/run/kazoo
-
-
-echo "Removing file based loggers since we're in docker ..."
+# note: don't worry about log level here, it's overwritten
+# by the value in config.ini later
+log "Writing $app sys.config ..."
 tee /etc/kazoo/core/sys.config <<EOF
 [
- {lager, [
-          {handlers, [
-                      {lager_console_backend, info}
-                     ]},
-          {colored, ${KAZOO_LOG_COLOR}}
-         ,{colors, [
-             {debug,     "\e[0;38m" }
-            ,{info,      "\e[1;32m" }
-            ,{notice,    "\e[1;36m" }
-            ,{warning,   "\e[1;33m" }
-            ,{error,     "\e[1;31m" }
-            ,{critical,  "\e[1;35m" }
-            ,{alert,     "\e[1;44m" }
-            ,{emergency, "\e[1;41m" }
-         ]}
-         ,{error_logger_hwm, 500}
-         ]}
+    {lager, [
+        {handlers, [
+            {lager_console_backend, info}
+        ]},
+    {colored, ${KAZOO_LOG_COLOR}},
+    {colors, [
+        {debug,     "\e[0;38m" },
+        {info,      "\e[1;32m" },
+        {notice,    "\e[1;36m" },
+        {warning,   "\e[1;33m" },
+        {error,     "\e[1;31m" },
+        {critical,  "\e[1;35m" },
+        {alert,     "\e[1;44m" },
+        {emergency, "\e[1;41m" }
+    ]},
+    {error_logger_hwm, 500}
+    ]}
 ].
 EOF
 
 
-echo "Configuring vm.args ..."
+log "Writing $app vm.args ..."
 tee /etc/kazoo/core/vm.args <<EOF
 # Tell SASL not to log progress reports, and log SASL errors to a file
 -sasl errlog_type $KAZOO_SASL_ERRLOG_TYPE
 -sasl sasl_error_logger $KAZOO_SASL_ERROR_LOGGER
--boot start_sasl
+
+# Boot kazoo $KAZOO_RELEASE release
+-boot $HOME/releases/$KAZOO_RELEASE/kazoo
+
+# Loading mode
+-mode interactive
 
 # Use the following erlang long hostname
--name ${ERLANG_VM}@$(env hostname -f)
+-name $ERLANG_VM@$(env hostname -f)
 
 # Use the following sys.config
 -config /etc/kazoo/core/sys.config
@@ -118,57 +127,62 @@ tee /etc/kazoo/core/vm.args <<EOF
 # Treat error_logger:warning_msg/2 as warnings instead of errors (default)
 +W w
 
-# No shell plox
--noshell
+# No input
+-noinput
+
+# Enable SMP
+-smp enable
 
 # Erlang VM to boot
 -s ${ERLANG_VM}_app
 EOF
 
 
-# kazoo_config seems to be rejecting zone sections and also
-# rejecting any section with a zone key.
-#
-# [zone]
-# name = "$KAZOO_ZONE"
-# amqp_uri = "amqp://guest:guest@$KAZOO_AMQP_HOST:5672"
-# amqp_uri = "amqp://guest:guest@$KAZOO_SECONDARY_AMQP_HOST:5672"
+# Ignore this for now
+# ;[zone]
+# ;name = local
+# ;amqp_uri = "amqp://$RABBITMQ_USER:$RABBITMQ_PASS@$RABBITMQ_HOST_A:5672"
 
-echo "Writing kazoo config.ini ..."
+# ;[amqp]
+# ;zone = local
+# ;uri = "amqp://$RABBITMQ_USER:$RABBITMQ_PASS@$RABBITMQ_HOST_A:5672"
+
+
+log "Writing $app config.ini ..."
 tee  /etc/kazoo/core/config.ini <<EOF
-[amqp]
-uri = "amqp://guest:guest@$KAZOO_AMQP_HOST:5672"
-uri = "amqp://guest:guest@$KAZOO_SECONDARY_AMQP_HOST:5672"
+[zone]
+name = $KAZOO_ZONE
+amqp_uri = "amqp://$RABBITMQ_USER:$RABBITMQ_PASS@$RABBITMQ_HOST_A:5672"
+amqp_uri = "amqp://$RABBITMQ_USER:$RABBITMQ_PASS@$RABBITMQ_HOST_B:5672"
 
 [bigcouch]
-;zone = $KAZOO_ZONE
-ip = "$BIGCOUCH_HOST"
-port = $BIGCOUCH_DATA_PORT
-admin_port = $BIGCOUCH_ADMIN_PORT
+ip = "$COUCHDB_HOST"
+username = "$COUCHDB_USER"
+password = "$COUCHDB_PASS"
+port = $COUCHDB_DATA_PORT
+admin_port = $COUCHDB_ADMIN_PORT
 cookie = $ERLANG_COOKIE
-compact_automatically = $BIGCOUCH_COMPACT_AUTOMATICALLY
+compact_automatically = $COUCHDB_COMPACT_AUTOMATICALLY
 
 [kazoo_apps]
+host = $(env hostname -f)
 cookie = $ERLANG_COOKIE
-;zone = $KAZOO_ZONE
-
-[ecallmgr]
-cookie = $ERLANG_COOKIE
-;zone = $KAZOO_ZONE
+zone = $KAZOO_ZONE
 
 [log]
-console = ${KAZOO_LOG_LEVEL,,}
+console = $KAZOO_LOG_LEVEL
 EOF
 
 
-echo "Ensuring permissions ..."
-chown -R kazoo:kazoo ~ /etc/kazoo /tmp/erl_pipes /var/run/kazoo
-chmod 0600 ~/.erlang.cookie
+log "Ensuring permissions ..."
+chown -R $user:$user ~ /etc/kazoo
 
 
-echo "Starting $ERLANG_VM using node: $ERLANG_VM@$(env hostname -f)"
+log "Starting $ERLANG_VM@$(env hostname -f) ..."
 export ERL_CRASH_DUMP=$(date +%s)_${ERLANG_VM}_erl_crash.dump
-export ERL_LIBS=${HOME}/deps:${HOME}/core:${HOME}/applications:$ERL_LIBS
+export LD_LIBRARY_PATH=$HOME/erts-$ERTS_VERSION/lib:$LD_LIBRARY_PATH
+export ERTS_LIB_DIR=$HOME/lib
+export KAZOO_APPS
 
 cd ~ 
-    exec gosu kazoo erl -args_file /etc/kazoo/core/vm.args 2>&1
+    exec gosu $user erl -args_file /etc/kazoo/core/vm.args -- foreground 2>&1
