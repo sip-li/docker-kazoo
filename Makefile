@@ -13,6 +13,7 @@ GITHUB_REPO = docker-kazoo
 DOCKER_REPO = kazoo
 BUILD_BRANCH = master
 
+-include ../Makefile.inc
 
 .PHONY: all build test release shell run start stop rm rmi default
 
@@ -41,10 +42,10 @@ commit:
 	@git add -A .
 	@git commit
 
-dclean:
-	@-docker ps -aq | gxargs -I{} docker rm {} > /dev/null 2>&1 || true
-	@-docker images -f dangling=true -q | xargs docker rmi
-	@-docker volume ls -f dangling=true -q | xargs docker volume rm
+# dclean:
+# 	@-docker ps -aq | gxargs -I{} docker rm {} > /dev/null 2>&1 || true
+# 	@-docker images -f dangling=true -q | xargs docker rmi
+# 	@-docker volume ls -f dangling=true -q | xargs docker volume rm
 
 push:
 	@git push origin master
@@ -64,10 +65,10 @@ kill-deps:
 	@-cd ../docker-couchdb && make stop-as-dep && make rm-as-dep
 
 launch:
-	@docker run -d --name $(NAME) -h $(NAME).local --env-file default.env -v "$(shell pwd)/export:/host" -p "8000:8000" $(LOCAL_TAG)
+	@docker run -d --name $(NAME) -h $(NAME).local --env-file default.env -v "$(PWD)/export:/host" -p "8000:8000" $(LOCAL_TAG)
 
 launch-net:
-	@docker run -d --name $(NAME) -h $(NAME).local --env-file default.env -v "$(shell pwd)/export:/host" -p "8000:8000" --network=local --net-alias=$(NAME).local $(LOCAL_TAG)
+	@docker run -d --name $(NAME) -h $(NAME).local --env-file default.env -v "$(PWD)/export:/host" -p "8000:8000" --network=local --net-alias=$(NAME).local $(LOCAL_TAG)
 
 create-network:
 	@docker network create -d bridge local
@@ -81,8 +82,8 @@ load-media:
 init-apps:
 	@docker exec $(NAME) sup crossbar_maintenance init_apps /var/www/html/monster-ui/apps http://localhost:8000/v2
 
-# get-master-account:
-# 	@docker exec $(NAME) sup crossbar_maintenance find_account_by_name valuphone
+get-master-account:
+	@docker exec $(NAME) sup crossbar_maintenance find_account_by_name test
 
 logs:
 	@docker logs $(NAME)
