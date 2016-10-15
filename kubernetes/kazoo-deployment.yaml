@@ -12,42 +12,112 @@ spec:
         project: valuphone
         environment: production
     spec:
-      volumes:
-        - name: erlang-cookie-secret
-          secret:
-            secretName: erlang-cookie
       containers:
-        - name: kazoo
-          image: callforamerica/kazoo:4
-          env:
-            - name: KAZOO_LOG_LEVEL
-              value: debug
-            - name: KUBERNETES_HOSTNAME_FIX
-              value: 'true'
-            - name: DATACENTER
-              value: sl
-            - name: REGION
-              value: east
-          imagePullPolicy: Always
-          volumeMounts:
-            - name: erlang-cookie-secret
-              readOnly: true
-              mountPath: /etc/secrets/erlang
-          ports:
-            - name: crossbar
-              protocol: TCP
-              containerPort: 8000
-            - name: ws-tcp
-              protocol: TCP
-              containerPort: 5555
-            - name: ws-udp
-              protocol: UDP
-              containerPort: 5555
-          resources:
-            requests: 
-              cpu: 3
-              memory: 3G
-            # limits:
-            #   cpu:
-            #   memory:
-      restartPolicy: Always
+      - name: kazoo
+        image: callforamerica/kazoo:4.0
+        env:
+        - name: REGION
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo-config
+              key: region
+        - name: DATACENTER
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo-config
+              key: sl
+        - name: KAZOO_APPS
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo-config
+              key: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks
+        - name: ERLANG_VM
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo-config
+              key: erlang.vm
+        - name: ERLANG_THREADS
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo-config
+              key: erlang.threads
+        - name: KAZOO_LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo-config
+              key: kazoo.log-level
+        - name: KAZOO_LOG_COLOR
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo-config
+              key: kazoo.log-color
+        - name: RABBITMQ_HOST_A
+          valueFrom:
+            configMapKeyRef:
+              name: rabbitmq-config
+              key: rabbitmq.host.a
+        - name: RABBITMQ_HOST_B
+          valueFrom:
+            configMapKeyRef:
+              name: rabbitmq-config
+              key: rabbitmq.host.b
+        - name: RABBITMQ_USER
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-creds
+              key: rabbitmq.user
+        - name: RABBITMQ_PASS
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-creds
+              key: rabbitmq.pass
+        - name: KUBERNETES_HOSTNAME_FIX
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo-config
+              key: kubernetes.hostname-fix
+        - name: ERLANG_COOKIE
+          valueFrom:
+            secretKeyRef:
+              name: erlang-cookie
+              key: erlang.cookie
+        - name: COUCHDB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: couchdb-config
+              key: couchdb.host
+        - name: COUCHDB_USER
+          valueFrom:
+            secretKeyRef:
+              name: couchdb-creds
+              key: couchdb.user
+        - name: COUCHDB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: couchdb-creds
+              key: couchdb.pass
+        imagePullPolicy: Always
+        ports:
+        - name: crossbar
+          protocol: TCP
+          containerPort: 8000
+        - name: ws-tcp
+          protocol: TCP
+          containerPort: 5555
+        - name: ws-udp
+          protocol: UDP
+          containerPort: 5555
+        - name: fax-smtp
+          protocol: TCP
+          containerPort: 19025
+        - name: media-proxy
+          protocol: TCP
+          containerPort: 24517
+        resources:
+          requests: 
+            cpu: 4
+            memory: 4Gi
+          limits:
+            cpu: 4
+            memory: 4Gi
+    restartPolicy: Always

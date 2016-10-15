@@ -64,10 +64,10 @@ kill-deps:
 	@-cd ../docker-couchdb && make stop-as-dep && make rm-as-dep
 
 launch:
-	@docker run -d --name $(NAME) -h $(NAME).local --env-file default.env -p "8000:8000" $(LOCAL_TAG)
+	@docker run -d --name $(NAME) -h $(NAME).local --env-file default.env -v "$(shell pwd)/export:/host" -p "8000:8000" $(LOCAL_TAG)
 
 launch-net:
-	@docker run -d --name $(NAME) -h $(NAME).local --env-file default.env -p "8000:8000" --network=local --net-alias=$(NAME).local $(LOCAL_TAG)
+	@docker run -d --name $(NAME) -h $(NAME).local --env-file default.env -v "$(shell pwd)/export:/host" -p "8000:8000" --network=local --net-alias=$(NAME).local $(LOCAL_TAG)
 
 create-network:
 	@docker network create -d bridge local

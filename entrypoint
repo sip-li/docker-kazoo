@@ -5,6 +5,13 @@ set -e
 app=kazoo
 user=$app
 
+KAZOO_RELEASE=$(cat ~/releases/RELEASES | head -1 | cut -d',' -f3 | xargs)
+ERTS_VERSION=$(cat ~/releases/RELEASES | head -1 | cut -d',' -f4 | xargs)
+
+# kazoo only works when zone is set to local
+# trying to figure out why only the local zone works
+KAZOO_ZONE=local
+
 if [ -f /etc/default/$app ]
 then
     . /etc/default/$app
@@ -12,9 +19,6 @@ fi
 
 # This is the list of whapps that you want to autostart in this vm.
 : ${KAZOO_APPS:=blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks}
-
-: ${KAZOO_RELEASE:=$(cat ~/releases/RELEASES | head -1 | cut -d',' -f3 | xargs)}
-: ${ERTS_VERSION:=$(cat ~/releases/RELEASES | head -1 | cut -d',' -f4 | xargs)}
 
 : ${ERLANG_VM:=kazoo_apps}
 : ${ERLANG_THREADS:=64}
@@ -31,10 +35,6 @@ fi
 
 : ${REGION:=local}
 : ${DATACENTER:=dev}
-
-# kazoo only works when zone is set to local
-# trying to figure out why only the local zone works
-KAZOO_ZONE=local
 
 : ${KAZOO_ZONE:=${REGION}-${DATACENTER}}
 

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kazoo-config
+  labels:
+    app: kazoo
+    project: valuphone
+    environment: production
+data:
+  region: east
+  datacenter: sl
+  kazoo.apps: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks
+  erlang.vm: kazoo_apps
+  erlang.threads: 64
+  kazoo.host: kazoo
+  kazoo.log-level: info
+  kazoo.log-color: 'true'
+  kubernetes.hostname-fix: 'true'
+  kazoo.media.path: /opt/kazoo/media/prompts/en/us
+  kazoo.media.lang: en-us
+  kazoo.monster-apps.path: /var/www/html/monster-ui/apps
