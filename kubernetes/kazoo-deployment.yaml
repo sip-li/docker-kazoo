@@ -19,18 +19,18 @@ spec:
         - name: REGION
           valueFrom:
             configMapKeyRef:
-              name: kazoo-config
+              name: environment-config
               key: region
         - name: DATACENTER
           valueFrom:
             configMapKeyRef:
-              name: kazoo-config
-              key: sl
+              name: environment-config
+              key: datacenter
         - name: KAZOO_APPS
           valueFrom:
             configMapKeyRef:
               name: kazoo-config
-              key: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks
+              key: kazoo.kazoo-apps
         - name: ERLANG_VM
           valueFrom:
             configMapKeyRef:
@@ -54,12 +54,12 @@ spec:
         - name: RABBITMQ_HOST_A
           valueFrom:
             configMapKeyRef:
-              name: rabbitmq-config
+              name: environment-config
               key: rabbitmq.host.a
         - name: RABBITMQ_HOST_B
           valueFrom:
             configMapKeyRef:
-              name: rabbitmq-config
+              name: environment-config
               key: rabbitmq.host.b
         - name: RABBITMQ_USER
           valueFrom:
@@ -84,8 +84,8 @@ spec:
         - name: COUCHDB_HOST
           valueFrom:
             configMapKeyRef:
-              name: couchdb-config
-              key: couchdb.host
+              name: environment-config
+              key: couchdb.host.balanced
         - name: COUCHDB_USER
           valueFrom:
             secretKeyRef:

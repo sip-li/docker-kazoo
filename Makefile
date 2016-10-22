@@ -13,6 +13,13 @@ GITHUB_REPO = docker-kazoo
 DOCKER_REPO = kazoo
 BUILD_BRANCH = master
 
+PORT_ARGS = -p "5555:5555" -p "8000:8000" -p "19025:19025" -p "24517:24517"
+VOLUME_ARGS = -v "$(PWD)/export:/host"
+ENV_ARGS = --env-file default.env
+SHELL = bash -l
+
+kamip = $(shell docker inspect -f '{{.NetworkSettings.Networks.local.IPAddress}}' kamailio)
+
 -include ../Makefile.inc
 
 .PHONY: all build test release shell run start stop rm rmi default
@@ -42,33 +49,40 @@ commit:
 	@git add -A .
 	@git commit
 
-# dclean:
-# 	@-docker ps -aq | gxargs -I{} docker rm {} > /dev/null 2>&1 || true
-# 	@-docker images -f dangling=true -q | xargs docker rmi
-# 	@-docker volume ls -f dangling=true -q | xargs docker volume rm
-
 push:
 	@git push origin master
 
 shell:
-	@docker exec -ti $(NAME) /bin/bash -l
-
-run:
-	@docker run -it --rm --name $(NAME) --entrypoint bash $(LOCAL_TAG)
+	@docker exec -ti $(NAME) $(SHELL)
 
 launch-deps:
 	@-cd ../docker-rabbitmq && make launch-as-dep
 	@-cd ../docker-couchdb && make launch-as-dep
 
-kill-deps:
-	@-cd ../docker-rabbitmq && make stop-as-dep && make rm-as-dep
-	@-cd ../docker-couchdb && make stop-as-dep && make rm-as-dep
+rmf-deps:
+	@-cd ../docker-rabbitmq && make rmf-as-dep
+	@-cd ../docker-couchdb && make rmf-as-dep
+
+run:
+	@docker run -it --rm --name $(NAME) $(LOCAL_TAG) $(SHELL)
 
 launch:
-	@docker run -d --name $(NAME) -h $(NAME).local --env-file default.env -v "$(PWD)/export:/host" -p "8000:8000" $(LOCAL_TAG)
+	@docker run -d --name $(NAME) -h $(NAME).local $(ENV_ARGS) $(PORT_ARGS) $(VOLUME_ARGS) $(LOCAL_TAG)
 
 launch-net:
-	@docker run -d --name $(NAME) -h $(NAME).local --env-file default.env -v "$(PWD)/export:/host" -p "8000:8000" --network=local --net-alias=$(NAME).local $(LOCAL_TAG)
+	@docker run -d --name $(NAME) -h $(NAME).local $(ENV_ARGS) $(PORT_ARGS) $(VOLUME_ARGS) --network=local --net-alias=$(NAME).local $(LOCAL_TAG)
+
+launch-dev:
+	@$(MAKE) launch-net
+
+rmf-dev:
+	@$(MAKE) rmf
+
+launch-as-dep:
+	@$(MAKE) launch-net
+
+rmf-as-dep:
+	@$(MAKE) rmf
 
 create-network:
 	@docker network create -d bridge local
@@ -81,6 +95,12 @@ load-media:
 
 init-apps:
 	@docker exec $(NAME) sup crossbar_maintenance init_apps /var/www/html/monster-ui/apps http://localhost:8000/v2
+
+add-fs-node:
+	@docker exec $(NAME) sup ecallmgr_maintenance add_fs_node freeswitch@freeswitch.local
+
+allow-sbc:
+	@./allow-sbc.sh dev
 
 get-master-account:
 	@docker exec $(NAME) sup crossbar_maintenance find_account_by_name test
@@ -147,7 +167,19 @@ kube-logsft:
 kube-shell:
 	@kubectl exec -ti $(shell kubectl get po | grep $(NAME) | cut -d' ' -f1) -- bash
 
-kazoo-maint-nodes:
-	@kubectl exec $(shell kubectl get po | grep $(NAME) | cut -d' ' -f1) -- sup -h "$$(shell hostname)" kazoo_maintenance nodes
+# kube-init-account:
+# 	@docker exec $(NAME) sup crossbar_maintenance create_account test localhost admin kazootest
+
+# kube-load-media:
+# 	@docker exec $(NAME) sup kazoo_media_maintenance import_prompts /opt/kazoo/media/prompts/en/us en-us
+
+# kube-init-apps:
+# 	@docker exec $(NAME) sup crossbar_maintenance init_apps /var/www/html/monster-ui/apps http://localhost:8000/v2
+
+# kube-add-fs-node:
+# 	@docker exec $(NAME) sup ecallmgr_maintenance add_fs_node freeswitch@freeswitch.local
+
+kube-allow-sbc:
+	@./allow-sbc.sh kube 
 
 default: build
