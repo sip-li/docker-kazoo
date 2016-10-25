@@ -42,7 +42,12 @@ ENV     HOME=/opt/kazoo
 COPY    build.sh /tmp/
 RUN     /tmp/build.sh
 
-COPY    entrypoint /
+# bug with docker hub automated builds when interating with root directory
+# ref: https://forums.docker.com/t/automated-docker-build-fails/22831/27
+# COPY    entrypoint /entrypoint
+COPY    entrypoint /tmp/
+RUN     mv /tmp/entrypoint /
+
 COPY    kazootool $HOME/bin/
 
 ENV     ERLANG_VM=kazoo_apps \
