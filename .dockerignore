@@ -1,4 +1,10 @@
-Makefile
-README.md
 kubernetes/
-export
+tests/
+scripts/
+.cache/
+.*/
+.*
+*.md
+*.rst
+*.env
+Makefile

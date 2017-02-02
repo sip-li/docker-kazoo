@@ -1,11 +1,73 @@
+# create erlang cookie:  kubectl create secret generic erlang-cookie --from-literal=erlang.cookie=$(LC_ALL=C tr -cd '[:alnum:]' < /dev/urandom | head -c 64)
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: erlang-cookie
+  labels:
+    app: kazoo
+    test: 'true'
+    environment: testing
+type: Opaque
+data:
+  erlang.cookie: WlgyZVA4Umo4cnVmUjVJbjNnWGV1akhYNllseEREbnRyd3ZROE5kcGd3OXFOQjZ5UFhPUWhxNFF4bEc0WnZaQQ==
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kazoo
+  labels:
+    app: kazoo
+    test: 'true'
+    environment: testing
+data:
+  kube.hostname.fix: 'true'
+  datacenter: sl
+  region: east
+  erlang.threads: 64
+  couchdb.host: couchdb-lb
+  kazoo.zone: local
+  kazoo.apps: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks
+  kazoo.log.level: info
+  kazoo.log.color: 'true'
+  kazoo.amqp.hosts: rabbitmq-alpha.local,rabbitmq-beta.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kazoo
+  labels:
+    app: kazoo
+    test: 'true'
+    environment: testing
+spec:
+  selector:
+    app: kazoo
+  ports:
+  - name: crossbar
+    protocol: TCP
+    port: 8000
+  - name: ws-tcp
+    protocol: TCP
+    port: 5555
+  - name: ws-udp
+    protocol: UDP
+    port: 5555
+  - name: fax-smtp
+    protocol: TCP
+    port: 19025
+  - name: media-proxy
+    protocol: TCP
+    port: 24517
+---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: kazoo
   labels:
     app: kazoo
-    project: valuphone
-    environment: production
+    test: 'true'
+    environment: testing
   annotations:
     pod.beta.kubernetes.io/init-containers: |-
       [
@@ -33,13 +95,13 @@ spec:
     metadata:
       labels:
         app: kazoo
-        project: valuphone
-        environment: production
+        test: 'true'
+        environment: testing
     spec:
       containers:
       - name: kazoo
-        image: callforamerica/kazoo
-        imagePullPolicy: Always
+        image: callforamerica/kazoo:latest
+        imagePullPolicy: IfNotPresent
         env:
         - name: KUBE_HOSTNAME_FIX
           valueFrom:
@@ -128,13 +190,6 @@ spec:
           containerPort: 19025
         - name: media-proxy
           containerPort: 24517
-        resources:
-          requests:
-            cpu: 4
-            memory: 4Gi
-          limits:
-            cpu: 4
-            memory: 4Gi
         readinessProbe:
           httpGet:
             path: /

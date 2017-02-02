@@ -1,13 +1,16 @@
-kind: Service
 apiVersion: v1
-metadata: 
+kind: Service
+metadata:
   name: kazoo
+  labels:
+    app: kazoo
+    project: valuphone
+    environment: production
 spec:
   selector:
     app: kazoo
     project: valuphone
     environment: production
-  type: ClusterIP
   ports:
   - name: crossbar
     protocol: TCP

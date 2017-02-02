@@ -1,0 +1,45 @@
+version: '2.1'
+services:
+  kazoo:
+    extends:
+      file: docker-compose.yaml
+      service: kazoo
+    depends_on:
+      rabbitmq-alpha:
+        condition: service_healthy
+      rabbitmq-beta:
+        condition: service_healthy
+      couchdb:
+        condition: service_healthy
+      freeswitch:
+        condition: service_healthy
+      kamailio:
+        condition: service_healthy
+  rabbitmq-alpha:
+    extends:
+      file: docker-compose.yaml
+      service: rabbitmq-alpha
+  rabbitmq-beta:
+    extends:
+      file: docker-compose.yaml
+      service: rabbitmq-beta
+  couchdb:
+    extends:
+      file: docker-compose.yaml
+      service: couchdb
+freeswitch:
+  extends:
+    file: ../docker-freeswitch/docker-compose.yaml
+    service: freeswitch
+kamailio:
+  extends:
+    file: ../docker-kamailio/docker-compose.yaml
+    service: kamailio
+networks:
+  local:
+volumes:
+  data-rabbitmq-alpha:
+  data-rabbitmq-beta:
+  data-couchdb:
+  data-freeswitch:
+  data-kamailio:

@@ -1,0 +1,55 @@
+#!/bin/bash
+
+: ${NAME:=$(basename "$PWD" | cut -d'-' -f2)}
+: ${ACCOUNT:=test}
+: ${REALM:=localhost}
+: ${ADMIN_USER:=admin}
+: ${ADMIN_PASS:=secret}
+
+: ${LANGUAGE:=en-us}
+: ${MEDIA_PATH:=/opt/kazoo/media/prompts/en/us}
+: ${KAPPS_PATH:=/var/www/html/monster-ui/apps}
+: ${CROSSBAR_URI:=http://localhost:8000/v2}
+: ${FREESWITCH_HOST:=freeswitch.local}
+
+function init-acccount {
+	docker exec $NAME sup crossbar_maintenance create_account $ACCOUNT $REALM $ADMIN_USER $ADMIN_PASS
+}
+
+function load-media {
+	docker exec $NAME sup kazoo_media_maintenance import_prompts $MEDIA_PATH $LANGUAGE
+}
+
+function init-apps {
+	docker exec $NAME sup crossbar_maintenance init_apps $KAPPS_PATH $CROSSBAR_URI
+}
+
+function add-fs-node {
+	docker exec $NAME sup ecallmgr_maintenance add_fs_node freeswitch@ $FREESWITCH_HOST
+}
+
+function get-master-account {
+	docker exec $NAME sup crossbar_maintenance find_account_by_name $ACCOUNT
+}
+
+function allow-sbc {
+	docker exec $NAME sup
+}
+
+# init-account:
+# 	@docker exec $(NAME) sup crossbar_maintenance create_account test localhost admin kazootest
+#
+# load-media:
+# 	@docker exec $(NAME) sup kazoo_media_maintenance import_prompts /opt/kazoo/media/prompts/en/us en-us
+
+# init-apps:
+# 	@docker exec $(NAME) sup crossbar_maintenance init_apps /var/www/html/monster-ui/apps http://localhost:8000/v2
+
+# add-fs-node:
+# 	@docker exec $(NAME) sup ecallmgr_maintenance add_fs_node freeswitch@freeswitch.local
+
+# allow-sbc:
+# 	@./allow-sbc.sh dev
+# #
+# get-master-account:
+# 	@docker exec $(NAME) sup crossbar_maintenance find_account_by_name test

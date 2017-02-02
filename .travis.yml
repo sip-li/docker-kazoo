@@ -1,0 +1,29 @@
+services: docker
+env:
+  global:
+  - DOCKER_USER=callforamerica
+  # DOCKER_PASS
+  - secure: "nkFUhXSpa0I2YDqKauxDvTClysqbbqAbQH1PkGR5aTc+v8CVlE3XosdUFO8wpohnWHDjqBrCwL6Xa3chMyboxk+EVZWKCdyVtJ15KTBvPfcLnEbCD/ZCwk7L9BpHtTTXuYbP9RREdXVNke29S2ohN/Dt9TYN06sOBMuEuLjNxSACc7n3N7/vmQ+MXjuKV0HdOW3plXVvbdiP30QeowC9K9R8igUXc+gt9FIOqq+qh2oKhOTwIObJ1Sc/HcD0c2G+TFFFZaaJ5kZ8AfJXO8FCO2C2KLLOyIqmGLTgOIrxzXEawBCgU8khjR0P8Qkvj+J/eEwJrsqZ2H1y+eJSvnnb9Y3VFX/ElrErWs6LccbObo/XDY/QbirtenKnMdX9Iz3zwRI46TjziYrpLdUkVEr4xhebSdI49T2k3UJx7KhFgzfY+I634X1M7VaSD+JLGBwaQ5PDTwMZQGCAYQ93QfnAF7iYRg/2zv1AJcl1OJ4AP/iblbSZU2a9R7qypMNQcoimqgGaIfL+rjFucbcEdZLyxHlP1I+rAsJ1g2ZCdmAu22SErVLU8oIygs6+Qo4sk4Xip4aVYCaoGupTC/oU+msVzkPBiM8V2JrC77wU9qe2/Dal8zUrcWl3kpRgfdxUps2sCT94oSUKyalZGpVbYFk/FsdfxzBoLDpTXT92R/PDx9c="
+notifications:
+  email:
+    on_success: never
+    on_failure: always
+  slack:
+    rooms:
+    - secure: "pMoYxHfR+7KapRt6h2lHFTq5R6zTTT5YSm2q+0faiyt0lX7VA4qqg1hkxlqdc4r/zmTfXSqpa7Rgy4hZlmv08Q0ZtlpF0fSkSI5Iw1OYKi8Shv0la+JylPCxZHorIkV6BapDj1OSGWtBYVz/aV0aDM7gggs9XyuqVaGE1oCJuyVrhCeyP5I0C0GWfAKQVI0qaLxgSeSeXKCkk2e70eirxwtO8sah+fsz16SJXeda503WXHcyuwHTPgwJJ9i9K0xYvNjsaqTDQ/vAKZcR4c5CyfQYKk89mdxwluSK0xnGljUcigZ1hEzVJsZzd5y6Sx+2pmQW2s2jVV/kGcMOhekbRlThiDyYDWnVOYm4GVPVYWOOvuUQ5Oznsjw2aaWpsejbcGsoqRhpU7dKkql25nSG5SzPSTQQYHlyUdjS7p06RRcRtmh1PRh3RS6P6uXtd+I3wYxiPFCisR+GyyOpsH4gl2Zgq2Sc3QxyF8p53b86EXCvgUdVsGSoIWk1/tOKlsD0RFGNjTd40v8cD3+SLVznBLHSkYJ3wONz5/nmVq7Q0MMwO38knyzB4UKO1V4mycLW4Pmvu/42fi5nJ7Ux/0DGR8ZVSMd8OCpDEEQQth3HwfIIE8MZOYf42GT2SkGDI/QKHtzgxUQQjZNPDEd4C34rQh+WBolv4MDUgkgAl+4+on0="
+    on_success: always
+    on_failure: always
+
+before_install:
+- pip install --upgrade docker-compose
+- source scripts/ci/environment.sh
+- clone-deps rabbitmq freeswitch
+
+install: docker-compose build
+
+script: tests/run
+
+after_success:
+- ci-tag-build
+- hub-push
+- hub-trigger

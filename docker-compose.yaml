@@ -1,0 +1,43 @@
+version: '2.1'
+services:
+  kazoo:
+    container_name: kazoo
+    hostname: kazoo.local
+    build: .
+    image: "callforamerica/kazoo:${TAG:-latest}"
+    env_file: default.env
+    ports:
+    - "5555:5555"
+    - "8000:8000"
+    - "19025:19025"
+    - "24517:24517"
+    networks:
+      local:
+        aliases:
+        - kazoo.local
+    depends_on:
+      rabbitmq-alpha:
+        condition: service_healthy
+      rabbitmq-beta:
+        condition: service_healthy
+      couchdb:
+        condition: service_healthy
+  rabbitmq-alpha:
+    extends:
+      file: ../docker-rabbitmq/docker-compose-ha.yaml
+      service: rabbitmq-alpha
+  rabbitmq-beta:
+    extends:
+      file: ../docker-rabbitmq/docker-compose-ha.yaml
+      service: rabbitmq-beta
+  couchdb:
+    extends:
+      file: ../docker-couchdb/docker-compose.yaml
+      service: couchdb
+    image: "callforamerica/couchdb:latest"
+networks:
+  local:
+volumes:
+  data-rabbitmq-alpha:
+  data-rabbitmq-beta:
+  data-couchdb:

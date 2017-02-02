@@ -1,1 +1,3 @@
-export
+.cache/
+__pycache__/
+*.pyc
