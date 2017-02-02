@@ -17,7 +17,7 @@ notifications:
 before_install:
 - pip install --upgrade docker-compose
 - source scripts/ci/environment.sh
-- clone-deps rabbitmq freeswitch
+- clone-deps rabbitmq couchdb
 
 install: docker-compose build
 
