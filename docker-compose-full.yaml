@@ -27,14 +27,14 @@ services:
     extends:
       file: docker-compose.yaml
       service: couchdb
-freeswitch:
-  extends:
-    file: ../docker-freeswitch/docker-compose.yaml
-    service: freeswitch
-kamailio:
-  extends:
-    file: ../docker-kamailio/docker-compose.yaml
-    service: kamailio
+  freeswitch:
+    extends:
+      file: ../docker-freeswitch/docker-compose.yaml
+      service: freeswitch
+  kamailio:
+    extends:
+      file: ../docker-kamailio/docker-compose.yaml
+      service: kamailio
 networks:
   local:
 volumes:

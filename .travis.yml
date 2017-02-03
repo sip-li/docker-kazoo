@@ -1,3 +1,4 @@
+language: python
 services: docker
 env:
   global:
@@ -20,7 +21,7 @@ before_install:
 - clone-deps rabbitmq couchdb
 - pull-deps rabbitmq couchdb
 
-install: docker-compose build kazoo
+install: travis_wait 30 docker-compose build kazoo
 
 script: tests/run
 
