@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 
-if [[ -f $(dirname $0)/vars.env ]]; then
-    source $(dirname $0)/vars.env
-    [[ ! -z $CLONE_DEPS ]] && export CLONE_DEPS
-    [[ ! -z $TEST_USING ]] && export TEST_USING
+base=$(dirname $0)
+
+if [[ -f $base/vars.env ]]; then
+    source $base/vars.env
+    export $(cut -d'=' -f1 $base/vars.env | xargs)
 fi
 
 docker run -it --rm \
 	-e CLONE_DEPS \
-    -e TEST_USING \
     -v /var/run/docker.sock:/var/run/docker.sock \
 	-v $(pwd):/repos/app \
-    callforamerica/testdocker
+    callforamerica/testdocker \
+    python3 tests/tests.py

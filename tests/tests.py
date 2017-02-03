@@ -12,8 +12,7 @@ from testdocker import (
 
 
 class TestKazoo(ContainerTestMixin, unittest.TestCase):
-    """
-    Test kazoo container.
+    """Test kazoo container.
 
     Attributes:
         name:
@@ -47,12 +46,14 @@ class TestKazoo(ContainerTestMixin, unittest.TestCase):
     test_http_uris = ['http://localhost:8000']
 
     def test_correct_name_in_vm_args(self):
+        """Assert correct erlang node name in /etc/kazoo/core/vm.args"""
         cmd = 'cat /etc/kazoo/core/vm.args'
         exit_code, output = self.container.exec(cmd)
         self.assertEqual(exit_code, 0)
         self.assertRegex(output, r'-name kazoo_apps')
 
     def test_correct_amqp_uris_in_config_ini(self):
+        """Assert correct amqp_uri's in /etc/kazoo/core/config.ini"""
         cmd = 'cat /etc/kazoo/core/config.ini'
         output = self.container.exec(cmd, output_only=True)
         amqp_hosts = self.container.env['KAZOO_AMQP_HOSTS'].split(',')
@@ -63,6 +64,7 @@ class TestKazoo(ContainerTestMixin, unittest.TestCase):
                     self.assertRegex(output, pattern)
 
     def test_correct_bigcouch_ip_in_config_ini(self):
+        """Assert correct ip in bigcouch section of config.ini"""
         cmd = 'cat /etc/kazoo/core/config.ini'
         output = self.container.exec(cmd, output_only=True)
         parser = configparser.ConfigParser(strict=False)
@@ -73,6 +75,7 @@ class TestKazoo(ContainerTestMixin, unittest.TestCase):
         )
 
     def test_correct_bigcouch_creds_in_config_ini(self):
+        """Assert correct credentials in bigcouch section of config.ini"""
         cmd = 'cat /etc/kazoo/core/config.ini'
         output = self.container.exec(cmd, output_only=True)
         parser = configparser.ConfigParser(strict=False)
@@ -86,47 +89,58 @@ class TestKazoo(ContainerTestMixin, unittest.TestCase):
         self.assertEqual(parser.get('bigcouch', 'admin_port'),
                          self.container.env['COUCHDB_ADMIN_PORT'])
         self.assertEqual(parser.get('bigcouch', 'cookie'),
-                         self.container.env['ERLANG_COOKIE'])
+                         self.container.env['ERLANG_COOKIE']
+        )
 
     def test_correct_zone_in_zone_section_of_config_ini(self):
+        """Assert correct zone in zone section of config.ini"""
         cmd = 'cat /etc/kazoo/core/config.ini'
         output = self.container.exec(cmd, output_only=True)
         parser = configparser.ConfigParser(strict=False)
         parser.read_string(output)
         self.assertEqual(parser.get('zone', 'name'),
-                         self.container.env['KAZOO_ZONE'])
+                         self.container.env['KAZOO_ZONE']
+        )
 
     def test_correct_zone_in_kazoo_apps_section_of_config_ini(self):
+        """Assert correct zone in kazoo_apps section of config.ini"""
         cmd = 'cat /etc/kazoo/core/config.ini'
         output = self.container.exec(cmd, output_only=True)
         parser = configparser.ConfigParser(strict=False)
         parser.read_string(output)
         self.assertEqual(parser.get('kazoo_apps', 'zone'),
-                         self.container.env['KAZOO_ZONE'])
+                         self.container.env['KAZOO_ZONE']
+        )
 
     def test_correct_cookie_in_kazoo_apps_section_of_config_ini(self):
+        """Assert correct cookie in kazoo_apps section of config.ini"""
         cmd = 'cat /etc/kazoo/core/config.ini'
         output = self.container.exec(cmd, output_only=True)
         parser = configparser.ConfigParser(strict=False)
         parser.read_string(output)
         self.assertEqual(parser.get('kazoo_apps', 'cookie'),
-                         self.container.env['ERLANG_COOKIE'])
+                         self.container.env['ERLANG_COOKIE']
+        )
 
     def test_correct_host_in_kazoo_apps_section_of_config_ini(self):
+        """Assert correct host in kazoo_apps section of config.ini"""
         cmd = 'cat /etc/kazoo/core/config.ini'
         output = self.container.exec(cmd, output_only=True)
         parser = configparser.ConfigParser(strict=False)
         parser.read_string(output)
         self.assertIn(parser.get('kazoo_apps', 'host'),
-                      self.container.hostnames)
+                      self.container.hostnames
+        )
 
     def test_correct_console_log_level_in_log_section_of_config_ini(self):
+        """Assert correct console log_level in log section of config.ini"""
         cmd = 'cat /etc/kazoo/core/config.ini'
         output = self.container.exec(cmd, output_only=True)
         parser = configparser.ConfigParser(strict=False)
         parser.read_string(output)
         self.assertEqual(parser.get('log', 'console'),
-                         self.container.env['KAZOO_LOG_LEVEL'])
+                         self.container.env['KAZOO_LOG_LEVEL']
+        )
 
 
 if __name__ == '__main__':
