@@ -18,8 +18,9 @@ before_install:
 - pip install --upgrade docker-compose
 - source scripts/ci/environment.sh
 - clone-deps rabbitmq couchdb
+- pull-deps rabbitmq couchdb
 
-install: docker-compose build
+install: docker-compose build kazoo
 
 script: tests/run
 

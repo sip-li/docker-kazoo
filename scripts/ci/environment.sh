@@ -75,13 +75,24 @@ function hub-trigger {
 
 function clone-deps {
     local org='sip-li'
+    local dep
     if [[ ! -z "$@" ]]; then
         printf "Cloning deps: $@\n"
         for dep in "$@"; do
-            printf "$dep\n"
             pushd ..
             git clone https://github.com/$org/docker-${dep}
             popd
+        done
+    fi
+}
+
+function pull-deps {
+    local user=$(get-user)
+    local dep
+    if [[ ! -z "$@" ]]; then
+        printf "Pulling deps: $@\n"
+        for dep in "$@"; do
+            docker pull $user/$dep
         done
     fi
 }
