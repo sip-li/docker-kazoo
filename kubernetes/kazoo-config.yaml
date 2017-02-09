@@ -10,7 +10,7 @@ data:
   kube.hostname.fix: 'true'
   datacenter: sl
   region: east
-  erlang.threads: 64
+  erlang.threads: '64'
   couchdb.host: couchdb-lb
   kazoo.zone: local
   kazoo.apps: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks

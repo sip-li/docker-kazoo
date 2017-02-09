@@ -5,7 +5,7 @@ set -e
 [[ -f /etc/entrypoint ]] && . /etc/entrypoint
 [[ -f /etc/default/$APP ]] && . /etc/default/$APP
 
-: readonly ${PUBLIC_FQDN:=$(env hostname -f)}
+: readonly ${PUBLIC_FQDN:=$(hostname -f)}
 
 # This is the list of whapps that you want to autostart in this vm.
 : readonly ${KAZOO_APPS:=blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks}

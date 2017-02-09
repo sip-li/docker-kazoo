@@ -1,0 +1,329 @@
+#
+# RABBITMQ
+#
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-creds
+  labels:
+    app: rabbitmq
+    test: 'true'
+    environment: testing
+type: Opaque
+data:
+  rabbitmq.pass: RVZCNklCQVhWMTlUWEtlQWZ4dWRUQkk0RVk3dzljaWk=
+  rabbitmq.user: Y29sbGFib3JhdGU=
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: erlang-cookie
+  labels:
+    app: rabbitmq
+    test: 'true'
+    environment: testing
+type: Opaque
+data:
+  erlang.cookie: WlgyZVA4Umo4cnVmUjVJbjNnWGV1akhYNllseEREbnRyd3ZROE5kcGd3OXFOQjZ5UFhPUWhxNFF4bEc0WnZaQQ==
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq
+  labels:
+    app: rabbitmq
+    test: 'true'
+    environment: testing
+data:
+  kube.hostname.fix: 'true'
+  kube.hostname.short: 'true'
+  rabbitmq.log.level: info
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: rabbitmq
+  labels:
+    app: rabbitmq
+    test: 'true'
+    environment: testing
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+    - name: amqp
+      port: 5672
+    - name: admin
+      port: 15672
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  labels:
+    app: rabbitmq
+    test: 'true'
+    environment: testing
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+        test: 'true'
+        environment: testing
+    spec:
+      containers:
+      - name: rabbitmq
+        image: callforamerica/rabbitmq:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: KUBE_HOSTNAME_FIX
+          valueFrom:
+            configMapKeyRef:
+              name: rabbitmq
+              key: kube.hostname.fix
+        - name: KUBE_HOSTNAME_SHORT
+          valueFrom:
+            configMapKeyRef:
+              name: rabbitmq
+              key: kube.hostname.short
+        - name: RABBITMQ_LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: rabbitmq
+              key: rabbitmq.log.level
+        - name: RABBITMQ_DEFAULT_USER
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-creds
+              key: rabbitmq.user
+        - name: RABBITMQ_DEFAULT_PASS
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-creds
+              key: rabbitmq.pass
+        - name: ERLANG_COOKIE
+          valueFrom:
+            secretKeyRef:
+              name: erlang-cookie
+              key: erlang.cookie
+        ports:
+        - name: amqp
+          containerPort: 5672
+        - name: admin
+          containerPort: 15672
+        volumeMounts:
+        - name: mnesia-ramfs
+          mountPath: /var/lib/rabbitmq/mnesia
+        readinessProbe:
+          tcpSocket:
+            port: 5672
+          initialDelaySeconds: 10
+          timeoutSeconds: 10
+        livenessProbe:
+          exec:
+            command: ["curl", "-i", "-u", "$(RABBITMQ_DEFAULT_USER):$(RABBITMQ_DEFAULT_PASS)", "http://localhost:15672/api/aliveness-test/%2F"]
+          initialDelaySeconds: 30
+          timeoutSeconds: 10
+          # exec:
+          #   command: ["rabbitmqctl", "node_health_check", "|", "grep", "-q", "'^Health check passed'"]
+          # initialDelaySeconds: 10
+          # timeoutSeconds: 5
+      volumes:
+      - name: mnesia-ramfs
+        emptyDir:
+          medium: Memory
+      restartPolicy: Always
+
+#
+# COUCHDB
+#
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: couchdb-creds
+  labels:
+    app: couchdb
+    test: 'true'
+    environment: testing
+type: Opaque
+data:
+  couchdb.pass: RVZCNklCQVhWMTlUWEtlQWZ4dWRUQkk0RVk3dzljaWk=
+  couchdb.user: Y29sbGFib3JhdGU=
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: erlang-cookie
+  labels:
+    app: couchdb
+    test: 'true'
+    environment: testing
+type: Opaque
+data:
+  erlang.cookie: WlgyZVA4Umo4cnVmUjVJbjNnWGV1akhYNllseEREbnRyd3ZROE5kcGd3OXFOQjZ5UFhPUWhxNFF4bEc0WnZaQQ==
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: couchdb
+  labels:
+    app: couchdb
+    test: 'true'
+    environment: testing
+data:
+  erlang.threads: '25'
+  couchdb.log.level: info
+  couchdb.require-valid-user: 'false'
+  couchdb.shards: '4'
+  couchdb.replicas: '3'
+  couchdb.read-quorum: '1'
+  couchdb.write-quorum: '2'
+  couchdiscover.log.level: info
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: couchdb
+  labels:
+    app: couchdb
+    test: 'true'
+    environment: testing
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: 'true'
+spec:
+  clusterIP: None
+  selector:
+    app: couchdb
+  ports:
+  - name: data
+    port: 5984
+  - name: admin
+    port: 5986
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: couchdb-lb
+  labels:
+    app: couchdb
+    test: 'true'
+    environment: testing
+spec:
+  selector:
+    app: couchdb
+  ports:
+  - name: data
+    port: 5984
+  - name: admin
+    port: 5986
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: couchdb
+  labels:
+    app: couchdb
+    test: 'true'
+    environment: testing
+spec:
+  serviceName: couchdb
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: couchdb
+        test: 'true'
+        environment: testing
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: couchdb
+        image: callforamerica/couchdb:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: COUCHDB_ADMIN_USER
+          valueFrom:
+            secretKeyRef:
+              name: couchdb-creds
+              key: couchdb.user
+        - name: COUCHDB_ADMIN_PASS
+          valueFrom:
+            secretKeyRef:
+              name: couchdb-creds
+              key: couchdb.pass
+        - name: ERLANG_COOKIE
+          valueFrom:
+            secretKeyRef:
+              name: erlang-cookie
+              key: erlang.cookie
+        - name: ERLANG_THREADS
+          valueFrom:
+            configMapKeyRef:
+              name: couchdb
+              key: erlang.threads
+        - name: COUCHDB_LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: couchdb
+              key: couchdb.log.level
+        - name: COUCHDB_REQUIRE_VALID_USER
+          valueFrom:
+            configMapKeyRef:
+              name: couchdb
+              key: couchdb.require-valid-user
+        - name: COUCHDB_SHARDS
+          valueFrom:
+            configMapKeyRef:
+              name: couchdb
+              key: couchdb.shards
+        - name: COUCHDB_REPLICAS
+          valueFrom:
+            configMapKeyRef:
+              name: couchdb
+              key: couchdb.replicas
+        - name: COUCHDB_READ_QUORUM
+          valueFrom:
+            configMapKeyRef:
+              name: couchdb
+              key: couchdb.read-quorum
+        - name: COUCHDB_WRITE_QUORUM
+          valueFrom:
+            configMapKeyRef:
+              name: couchdb
+              key: couchdb.write-quorum
+        ports:
+        - name: data
+          containerPort: 5984
+        - name: admin
+          containerPort: 5986
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5984
+          initialDelaySeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 5
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5984
+          initialDelaySeconds: 15
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 5
+      - name: couchdiscover
+        image: callforamerica/couchdiscover:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: couchdb
+              key: couchdiscover.log.level
+      restartPolicy: Always

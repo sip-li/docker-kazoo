@@ -22,15 +22,16 @@ metadata:
     environment: testing
 data:
   kube.hostname.fix: 'true'
+  kube.use-long-hostname: 'true'
   datacenter: sl
   region: east
-  erlang.threads: 64
+  erlang.threads: '64'
   couchdb.host: couchdb-lb
   kazoo.zone: local
   kazoo.apps: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks
   kazoo.log.level: info
   kazoo.log.color: 'true'
-  kazoo.amqp.hosts: rabbitmq-alpha.local,rabbitmq-beta.local
+  kazoo.amqp.hosts: rabbitmq
 ---
 apiVersion: v1
 kind: Service
@@ -108,6 +109,11 @@ spec:
             configMapKeyRef:
               name: kazoo
               key: kube.hostname.fix
+        - name: USE_LONG_HOSTNAME
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo
+              key: kube.use-long-hostname
         - name: ERLANG_THREADS
           valueFrom:
             configMapKeyRef:
@@ -146,12 +152,12 @@ spec:
         - name: REGION
           valueFrom:
             configMapKeyRef:
-              name: environment
+              name: kazoo
               key: region
         - name: DATACENTER
           valueFrom:
             configMapKeyRef:
-              name: environment
+              name: kazoo
               key: datacenter
         - name: KAZOO_AMQP_HOSTS
           valueFrom:

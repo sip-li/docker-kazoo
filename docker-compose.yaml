@@ -3,7 +3,11 @@ services:
   kazoo:
     container_name: kazoo
     hostname: kazoo.local
-    build: .
+    build:
+      context: .
+      args:
+        KAZOO_VERSION: '4.0'
+        KAZOO_BUILD_NUMBER: '8'
     image: "callforamerica/kazoo:${TAG:-latest}"
     env_file: default.env
     ports:

@@ -2,4 +2,4 @@
 
 : ${ERLANG_COOKIE:=$(cat ~/.erlang.cookie)}
 
-/bin/sup -c $ERLANG_COOKIE $@
+/usr/bin/sup -c $ERLANG_COOKIE $@

@@ -2,38 +2,18 @@ FROM callforamerica/debian
 
 MAINTAINER Joe Black <joeblack949@gmail.com>
 
-ARG     ERLANG_VERSION
 ARG     KAZOO_VERSION
-ARG     KAZOO_BRANCH
-ARG     KAZOO_CONFIGS_BRANCH
-ARG     KAZOO_SOUNDS_BRANCH
-ARG     MONSTER_UI_BRANCH
-ARG     MONSTER_APPS_VERSION
-ARG     MONSTER_APPS
-ARG     MONSTER_APPS_BRANCH
-ARG     MONSTER_APP_APIEXPLORER_BRANCH
-ARG     NODE_VERSION
-ARG     KERL_CONFIGURE_OPTIONS
+ARG     KAZOO_BUILD_NUMBER
 
-ENV     ERLANG_VERSION=${ERLANG_VERSION:-18.3}
-ENV     KAZOO_VERSION=${KAZOO_VERSION:-4.0}
-ENV     KAZOO_BRANCH=${KAZOO_BRANCH:-$KAZOO_VERSION}
-ENV     KAZOO_CONFIGS_BRANCH=${KAZOO_CONFIGS_BRANCH:-4.0}
-ENV     KAZOO_SOUNDS_BRANCH=${KAZOO_SOUNDS_BRANCH:-4.0}
-ENV     MONSTER_UI_BRANCH=${MONSTER_UI_BRANCH:-4.0}
-ENV     MONSTER_APPS_VERSION=${MONSTER_APPS_VERSION:-4.0}
-ENV     MONSTER_APPS_BRANCH=${MONSTER_APPS_BRANCH:-$MONSTER_APPS_VERSION}
-ENV     MONSTER_APPS=${MONSTER_APPS:-accounts,callflows,fax,numbers,pbxs,voip,voicemails,webhooks}
-ENV     MONSTER_APP_APIEXPLORER_BRANCH=${MONSTER_APP_APIEXPLORER_BRANCH:-master}
-ENV     NODE_VERSION=${NODE_VERSION:-6}
-ENV     KERL_CONFIGURE_OPTIONS=${KERL_CONFIGURE_OPTIONS:-'--disable-hipe --without-odbc --without-javac'}
+ENV     ERLANG_VERSION 18.3
+ENV     KAZOO_VERSION ${KAZOO_VERSION:-4.0}
+ENV     KAZOO_BUILD_NUMBER ${KAZOO_BUILD_NUMBER:-6}
+ENV     MONSTER_APPS_VERSION 4.0
+ENV     MONSTER_APPS accounts,callflows,fax,numbers,pbxs,voip,voicemails,webhooks
 
 LABEL   lang.erlang.version=$ERLANG_VERSION
 LABEL   app.kazoo.version=$KAZOO_VERSION
-LABEL   app.kazoo.branch=$KAZOO_BRANCH
-
 LABEL   app.monster-apps.version=$MONSTER_APPS_VERSION
-LABEL   app.monster-apps.branch=$MONSTER_APPS_BRANCH
 LABEL   app.monster-apps.apps="${MONSTER_APPS},apiexplorer"
 
 ENV     APP kazoo
@@ -46,11 +26,12 @@ RUN     /tmp/build.sh
 COPY    entrypoint /
 COPY    build/kazoo-tool $HOME/bin/
 COPY    build/sup /usr/local/bin/
-COPY    build/50-kazoo-functions.sh /etc/profile.d/
 
 ENV     ERL_MAX_PORTS 65536
 ENV     ERLANG_VM kazoo_apps
 ENV     ERLANG_THREADS 64
+
+ENV     USE_LONG_HOSTNAME true
 
 # options: debug info notice warning error critical alert emergency
 ENV     KAZOO_LOG_LEVEL info
