@@ -38,6 +38,5 @@ services:
     extends:
       file: ../docker-couchdb/docker-compose.yaml
       service: couchdb
-    image: "callforamerica/couchdb:latest"
 networks:
   local:
