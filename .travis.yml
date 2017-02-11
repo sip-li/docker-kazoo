@@ -18,14 +18,13 @@ notifications:
 before_install:
 - pip install --upgrade docker-compose
 - source scripts/ci/environment.sh
-- clone-deps rabbitmq couchdb
-- pull-deps rabbitmq couchdb
+- clone-deps rabbitmq couchdb freeswitch kamailio
+- pull-deps rabbitmq couchdb freeswitch kamailio
 
-install: travis_wait 25 docker-compose build kazoo
+install: docker-compose build kazoo
 
 script: tests/run
 
 after_success:
 - ci-tag-build
 - hub-push
-- hub-trigger
