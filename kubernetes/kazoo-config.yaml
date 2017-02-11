@@ -12,11 +12,10 @@ data:
   region: east
   erlang.threads: '64'
   couchdb.host: couchdb-lb
-  kazoo.zone: local
   kazoo.apps: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks
   kazoo.log.level: info
   kazoo.log.color: 'true'
-  kazoo.amqp.hosts: rabbitmq-alpha.local,rabbitmq-beta.local
+  kazoo.amqp.hosts: rabbitmq
   # kazoo.media.path: /opt/kazoo/media/prompts/en/us
   # kazoo.media.lang: en-us
   # kazoo.monster-apps.path: /var/www/html/monster-ui/apps

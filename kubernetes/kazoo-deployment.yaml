@@ -46,6 +46,11 @@ spec:
             configMapKeyRef:
               name: kazoo
               key: kube.hostname.fix
+        - name: USE_LONG_HOSTNAME
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo
+              key: kube.use-long-hostname
         - name: ERLANG_THREADS
           valueFrom:
             configMapKeyRef:
@@ -111,11 +116,6 @@ spec:
             configMapKeyRef:
               name: kazoo
               key: kazoo.apps
-        - name: KAZOO_ZONE
-          valueFrom:
-            configMapKeyRef:
-              name: kazoo
-              key: kazoo.zone
         ports:
         - name: crossbar
           containerPort: 8000

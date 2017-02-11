@@ -18,31 +18,8 @@ Pull requests with improvements always welcome.
 
 ## Build Environment
 
-Build environment variables are often used in the build script to bump version numbers and set other options during the docker build phase.  Their values can be overridden using a build argument of the same name.
+The build environment has been split off from this repo and now lives @ [https://github.com/sip-li/kazoo-builder](https://github.com/sip-li/kazoo-builder).  See the README.md file there for more details on the build environment.
 
-* `ERLANG_VERSION`: supplied to kerl to select the version of erlang that is installed prior to kazoo being built. Defaults to `18.3`.
-
-* `KAZOO_VERSION`: Informational purposes. Defaults to `4.0`.
-
-* `KAZOO_BRANCH`: supplied to `git clone -b` when cloning the kazoo repo. Defaults to `4.0`.
-
-* `KAZOO_CONFIGS_BRANCH`: supplied to `git clone -b` when cloning the kazoo-configs repo. Defaults to `4.0`.
-
-* `KAZOO_SOUNDS_BRANCH`: supplied to `git clone -b` when cloning the kazoo-sounds repo. Defaults to `4.0`.
-
-* `MONSTER_UI_BRANCH`: supplied to `git clone -b` when cloning the monster-ui repo. Defaults to `4.0`.
-
-* `MONSTER_APPS_VERSION`: Informational purposes. Defaults to `4.0`.
-
-* `MONSTER_APPS`: a comma delimited list of monster apps to clone/install.  Defaults to `accounts,callflows,fax,numbers,pbxs,voip,voicemails,webhooks`.
-
-* `MONSTER_APPS_BRANCH`: supplied to `git clone -b` when cloning the monster-ui application repos. Defaults to `master`.
-
-* `MONSTER_APP_APIEXPLORER_BRANCH`: supplied to `git clone -b` when cloning the monster-ui-apiexplorer repo. Defaults to `master`.
-
-* `NODE_VERSION`: used to select the version of node.js to install. Defaults to `6`.
-
-* `KERL_CONFIGURE_OPTIONS`: Used by kerl when building erlang, Defaults to `--disable-hipe --without-odbc --without-javac`.
 
 The following variables are standard in most of our dockerfiles to reduce duplication and make scripts reusable among different projects:
 
@@ -98,7 +75,7 @@ Run environment variables are used in the entrypoint script to render configurat
 
 ## Extra tools
 
-There is a binary called [kazootool](kazootool).  It contains the useful functions such as remote_console, upgrade, etc found in the original kazoo service file.  Since using service files in a docker container is a largely bad idea, I've extracted the useful functions and adapted them to work in the container environment.  Check it out
+There is a binary called [kazoo-tool](kazoo-tool) in `~/bin`.  It contains the useful functions such as remote_console, upgrade, etc found in the original kazoo service file.  Since using service files in a docker container is largely a very bad idea, I've extracted the useful functions and adapted them to work in the container environment.
 
 
 ## Usage
@@ -150,9 +127,8 @@ Create a secret for the erlang cookie:
 kubectl create secret generic erlang-cookie --from-literal=erlang.cookie=$(LC_ALL=C tr -cd '[:alnum:]' < /dev/urandom | head -c 64)
 ```
 
-*Ensure secrets also exist for the rabbitmq and couchdb credentials, else supply them directly in the env array of the pod template.*
-
-*Ensure rabbitmq deployment and couchdb statefulset is running.  This container will be paused by the kubewait init container until it's dependencies exist and in the ready state.
+* Ensure secrets also exist for the rabbitmq and couchdb credentials, else supply them directly in the env array of the pod template.*
+* Ensure rabbitmq deployment and couchdb statefulset is running.  This container will be paused by the kubewait init container until it's dependencies exist and in the ready state.
 
 Deploy kazoo:
 ```bash

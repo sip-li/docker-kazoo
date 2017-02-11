@@ -1,73 +1,52 @@
-#!/bin/bash
-
-REL=$(cat ~/releases/RELEASES | head -1 | cut -d',' -f3 | xargs)
-ERTS_VERSION=$(cat ~/releases/RELEASES | head -1 | cut -d',' -f4 | xargs)
-MODE=interactive
-LONG_NAME=$ERLANG_VM@$(env hostname -f)
-
-ERTS_PATH=$HOME/erts-${ERTS_VERSION}
-VMARGS_PATH=$REL_PATH/vm.args
-CONFIG_PATH=$HOME/sys.config
-BOOT_PATH=$REL_PATH/kazoo
-ERTS_LIB_DIR=$HOME/lib
+#!/bin/bash -l
 
 : ${ERLANG_COOKIE:=insecure-cookie}
 
 
-function log {
-    local msg="$1"
-    echo -e "\E[36m[*]\E[0m ${msg}"
-}
-
-function errlog {
-    local msg="$1"
-    echo -e "\E[31m[*]\E[0m error: ${msg}" >&2
-}
-
 function ping {
-    $ERTS_PATH/bin/escript $HOME/bin/nodetool -name $LONG_NAME -setcookie $ERLANG_COOKIE ping
+    $ERTS_DIR/bin/escript ~/bin/nodetool -name $ERLANG_VM -setcookie $ERLANG_COOKIE ping > /dev/null
 }
 
 function remote_console {
     if ping > /dev/null; then
-        local rem_name="remsh$(date +%s)-$LONG_NAME"
-        local ntt=$($ERTS_PATH/bin/escript $HOME/bin/nodetool -name $LONG_NAME -setcookie $ERLANG_COOKIE rpcterms net_kernel get_net_ticktime)
-        exec $ERTS_PATH/bin/erl -name $rem_name -remsh $LONG_NAME -boot $HOME/bin/start_clean -setcookie $ERLANG_COOKIE -hidden -kernel net_ticktime $ntt
+        local rem_name="remsh$(date +%s)-$ERLANG_VM"
+        local ntt=$($ERTS_DIR/bin/escript ~/bin/nodetool -name $ERLANG_VM -setcookie $ERLANG_COOKIE rpcterms net_kernel get_net_ticktime)
+        exec $ERTS_DIR/bin/erl -name $rem_name -remsh $ERLANG_VM -boot ~/bin/start_clean -setcookie $ERLANG_COOKIE -hidden -kernel net_ticktime $ntt
     fi
 }
 
 function upgrade {
     local file=$1
     local package="${file%%.tar.gz}"
-    [[ ! -f $file ]] && errlog "No file @ $file" && return 1
-    log "initiating upgrade using package: $package"
-    ping && exec $ERTS_PATH/bin/escript $HOME/bin/install_upgrade.escript install kazoo -name $LONG_NAME $ERLANG_COOKIE "$package"
+    [[ ! -f $file ]] && log::m-warn "No file @ $file" && return 1
+    log::m-info "initiating upgrade using package: $package"
+    ping && exec $ERTS_DIR/bin/escript ~/bin/install_upgrade.escript install kazoo -name $ERLANG_VM $ERLANG_COOKIE "$package"
 }
 
 function escript {
     local script="$1"
-    [[ ! -f $script ]] && errlog "No file @ $script" && return 1
-    ping && exec $ERTS_PATH/bin/escript "$script"
+    [[ ! -f $script ]] && log::m-warn "No file @ $script" && return 1
+    ping && exec $ERTS_DIR/bin/escript "$script"
 }
 
 function rpc {
     local args="$@"
-    [[ -z $args ]] && errlog "${FUNCNAME}: Usage: $0 $FUNCNAME Module Func Args" && return 1
-    ping && exec $ERTS_PATH/bin/escript $HOME/bin/nodetool -name $LONG_NAME -setcookie $ERLANG_COOKIE rpc $@
+    [[ -z $args ]] && log::m-warn "${FUNCNAME}: Usage: $0 $FUNCNAME Module Func Args" && return 1
+    ping && exec $ERTS_DIR/bin/escript ~/bin/nodetool -name $ERLANG_VM -setcookie $ERLANG_COOKIE rpc $@
 }
 
 # kazootool rpcterms kazoo_maintenance etop
 function rpcterms {
     local args="$@"
-    [[ -z $args ]] && errlog "${FUNCNAME}: Usage: $0 $FUNCNAME Module Func Args" && return 1
-    ping && exec $ERTS_PATH/bin/escript $HOME/bin/nodetool -name $LONG_NAME -setcookie $ERLANG_COOKIE rpcterms $@
+    [[ -z $args ]] && log::m-warn "${FUNCNAME}: Usage: $0 $FUNCNAME Module Func Args" && return 1
+    ping && exec $ERTS_DIR/bin/escript ~/bin/nodetool -name $ERLANG_VM -setcookie $ERLANG_COOKIE rpcterms $@
 }
 
 # kazootool eval 'kazoo_maintenance:etop()'
 function eval {
     local args="$@"
-    [[ -z $args ]] && errlog "${FUNCNAME}: Usage: $0 $FUNCNAME Module Func Args" && return 1
-    ping && exec $ERTS_PATH/bin/escript $HOME/bin/nodetool -name $LONG_NAME -setcookie $ERLANG_COOKIE eval $@
+    [[ -z $args ]] && log::m-warn "${FUNCNAME}: Usage: $0 $FUNCNAME Module Func Args" && return 1
+    ping && exec $ERTS_DIR/bin/escript ~/bin/nodetool -name $ERLANG_VM -setcookie $ERLANG_COOKIE eval $@
 }
 
 

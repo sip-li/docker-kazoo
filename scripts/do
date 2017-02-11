@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-: ${NAME:=$(basename "$PWD" | cut -d'-' -f2)}
+: ${NAME:=kazoo}
 : ${ACCOUNT:=test}
 : ${REALM:=localhost}
 : ${ADMIN_USER:=admin}
@@ -11,8 +11,9 @@
 : ${KAPPS_PATH:=/var/www/html/monster-ui/apps}
 : ${CROSSBAR_URI:=http://localhost:8000/v2}
 : ${FREESWITCH_HOST:=freeswitch.local}
+: ${KAMAILIO_HOST:=kamailio.valuphone.local}
 
-function init-acccount {
+function create-master-acccount {
 	docker exec $NAME sup crossbar_maintenance create_account $ACCOUNT $REALM $ADMIN_USER $ADMIN_PASS
 }
 
@@ -25,31 +26,26 @@ function init-apps {
 }
 
 function add-fs-node {
-	docker exec $NAME sup ecallmgr_maintenance add_fs_node freeswitch@ $FREESWITCH_HOST
+	docker exec $NAME sup ecallmgr_maintenance add_fs_node freeswitch@$FREESWITCH_HOST
+}
+
+function allow-sbc {
+	local kamailio_ip=$(docker exec -ti kamailio hostname -i)
+	docker exec $NAME sup ecallmgr_maintenance allow_sbc $KAMAILIO_HOST $kamailio_ip
 }
 
 function get-master-account {
 	docker exec $NAME sup crossbar_maintenance find_account_by_name $ACCOUNT
 }
 
-function allow-sbc {
-	docker exec $NAME sup
+function sup {
+	docker exec $NAME sup "$@"
 }
 
-# init-account:
-# 	@docker exec $(NAME) sup crossbar_maintenance create_account test localhost admin kazootest
-#
-# load-media:
-# 	@docker exec $(NAME) sup kazoo_media_maintenance import_prompts /opt/kazoo/media/prompts/en/us en-us
 
-# init-apps:
-# 	@docker exec $(NAME) sup crossbar_maintenance init_apps /var/www/html/monster-ui/apps http://localhost:8000/v2
-
-# add-fs-node:
-# 	@docker exec $(NAME) sup ecallmgr_maintenance add_fs_node freeswitch@freeswitch.local
-
-# allow-sbc:
-# 	@./allow-sbc.sh dev
-# #
-# get-master-account:
-# 	@docker exec $(NAME) sup crossbar_maintenance find_account_by_name test
+if [[ $1 ]]; then
+    "$@"
+else
+    echo "usage: $(basename $0) {create-master-acccount|load-media|init-apps|add-fs-node|allow-sbc|get-master-account}"
+    exit 1
+fi

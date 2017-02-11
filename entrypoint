@@ -7,6 +7,11 @@ set -e
 
 : readonly ${PUBLIC_FQDN:=$(hostname -f)}
 
+: readonly ${REGION:=local}
+: readonly ${DATACENTER:=dev}
+
+: readonly ${KAZOO_ZONE:=${REGION}-${DATACENTER}}
+
 # This is the list of whapps that you want to autostart in this vm.
 : readonly ${KAZOO_APPS:=blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks}
 
@@ -22,11 +27,6 @@ set -e
 : readonly ${KAZOO_SASL_ERRLOG_TYPE:=error}
 : readonly ${KAZOO_SASL_ERROR_LOGGER:=tty}
 
-: readonly ${REGION:=local}
-: readonly ${DATACENTER:=dev}
-
-: readonly ${KAZOO_ZONE:=${REGION}-${DATACENTER}}
-
 : readonly ${COUCHDB_HOST:=couchdb}
 : readonly ${COUCHDB_DATA_PORT:=5984}
 : readonly ${COUCHDB_ADMIN_PORT:=5986}
@@ -37,9 +37,6 @@ set -e
 : readonly ${KAZOO_AMQP_HOSTS:=rabbitmq}
 : readonly ${RABBITMQ_USER:=guest}
 : readonly ${RABBITMQ_PASS:=guest}
-
-readonly AMQP_URI_LIST=$(kazoo::build-amqp-uri-list "$KAZOO_AMQP_HOSTS" 'amqp_uri')
-# readonly AMQP_URI_LIST=$(kazoo::build-amqp-uri-list "$KAZOO_AMQP_HOSTS" 'uri')
 
 
 log::m-info "Writing $APP sys.config ..."
@@ -111,22 +108,11 @@ $(erlang::vmargs::get-name "$ERLANG_VM")
 EOF
 
 
-# Ignore this for now
-# [zone]
-# name = $KAZOO_ZONE
-# ;amqp_uri = "amqp://$RABBITMQ_USER:$RABBITMQ_PASS@$RABBITMQ_HOST_A:5672"
-# $AMQP_URI_LIST
-
-# [amqp]
-# zone = $KAZOO_ZONE
-# ;uri = "amqp://$RABBITMQ_USER:$RABBITMQ_PASS@$RABBITMQ_HOST_A:5672"
-# $AMQP_URI_LIST
-
 log::m-info "Writing $APP config.ini ..."
 tee  /etc/kazoo/core/config.ini <<EOF
 [zone]
 name = $KAZOO_ZONE
-$AMQP_URI_LIST
+$(kazoo::build-amqp-uri-list "$KAZOO_AMQP_HOSTS" 'amqp_uri')
 
 [bigcouch]
 ip = "$COUCHDB_HOST"

@@ -38,44 +38,6 @@ services:
     extends:
       file: ../docker-couchdb/docker-compose.yaml
       service: couchdb
-  freeswitch:
-    extends:
-      file: ../docker-freeswitch/docker-compose.yaml
-      service: freeswitch
-  kamailio:
-    container_name: kamailio
-    hostname: kamailio.valuphone.local
-    build: .
-    image: callforamerica/kamailio:${TAG:-latest}
-    env_file: default.env
-    ports:
-    - "5060-5061:5060-5061"
-    - "5060:5060/udp"
-    - "5064-5065:5064-5065"
-    - "5064-5065:5064-5065/udp"
-    - "7000-7001:7000-7001"
-    - "7000:7000/udp"
-    networks:
-      local:
-        aliases:
-        - kazoo.local
-    cap_add:
-    - IPC_LOCK
-    - NET_ADMIN
-    - NET_RAW
-    - NET_BROADCAST
-    - SYS_NICE
-    - SYS_RESOURCE
-    depends_on:
-      rabbitmq-alpha:
-        condition: service_healthy
-      rabbitmq-beta:
-        condition: service_healthy
-      freeswitch:
-        condition: service_healthy
-    networks:
-      local:
-        aliases:
-        - kamailio.valuphone.local
+    image: "callforamerica/couchdb:latest"
 networks:
   local:

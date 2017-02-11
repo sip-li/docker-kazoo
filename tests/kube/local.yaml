@@ -22,12 +22,10 @@ metadata:
     environment: testing
 data:
   kube.hostname.fix: 'true'
-  kube.use-long-hostname: 'true'
   datacenter: sl
   region: east
   erlang.threads: '64'
   couchdb.host: couchdb-lb
-  kazoo.zone: local
   kazoo.apps: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks
   kazoo.log.level: info
   kazoo.log.color: 'true'
@@ -109,11 +107,6 @@ spec:
             configMapKeyRef:
               name: kazoo
               key: kube.hostname.fix
-        - name: USE_LONG_HOSTNAME
-          valueFrom:
-            configMapKeyRef:
-              name: kazoo
-              key: kube.use-long-hostname
         - name: ERLANG_THREADS
           valueFrom:
             configMapKeyRef:
@@ -179,11 +172,6 @@ spec:
             configMapKeyRef:
               name: kazoo
               key: kazoo.apps
-        - name: KAZOO_ZONE
-          valueFrom:
-            configMapKeyRef:
-              name: kazoo
-              key: kazoo.zone
         ports:
         - name: crossbar
           containerPort: 8000

@@ -1,15 +1,22 @@
 #!/usr/bin/env bash
 
 base=$(dirname $0)
+image=callforamerica/testdocker
 
 if [[ -f $base/vars.env ]]; then
     source $base/vars.env
     export $(cut -d'=' -f1 $base/vars.env | xargs)
 fi
 
-docker run -it --rm \
-	-e CLONE_DEPS \
-    -v /var/run/docker.sock:/var/run/docker.sock \
-	-v $(pwd):/repos/app \
-    callforamerica/testdocker \
-    python3 tests/tests.py
+if [[ $1 == 'local' ]]; then
+    echo "Running tests locally ..."
+    python3 $base/tests.py
+else
+    docker pull $image
+    docker run -it --rm \
+    	--env-file $base/vars.env \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+    	-v $(pwd):/repos/app \
+        $image \
+        python3 tests/tests.py
+fi

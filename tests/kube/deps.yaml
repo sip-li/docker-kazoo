@@ -38,8 +38,9 @@ metadata:
     environment: testing
 data:
   kube.hostname.fix: 'true'
-  kube.hostname.short: 'true'
+  kube.use-long-hostname: 'true'
   rabbitmq.log.level: info
+  rabbitmq.use-longname: 'true'
 ---
 kind: Service
 apiVersion: v1
@@ -85,11 +86,16 @@ spec:
             configMapKeyRef:
               name: rabbitmq
               key: kube.hostname.fix
-        - name: KUBE_HOSTNAME_SHORT
+        - name: RABBITMQ_USE_LONGNAME
           valueFrom:
             configMapKeyRef:
               name: rabbitmq
-              key: kube.hostname.short
+              key: rabbitmq.use-longname
+        - name: USE_LONG_HOSTNAME
+          valueFrom:
+            configMapKeyRef:
+              name: rabbitmq
+              key: kube.use-long-hostname
         - name: RABBITMQ_LOG_LEVEL
           valueFrom:
             configMapKeyRef:
@@ -125,13 +131,9 @@ spec:
           timeoutSeconds: 10
         livenessProbe:
           exec:
-            command: ["curl", "-i", "-u", "$(RABBITMQ_DEFAULT_USER):$(RABBITMQ_DEFAULT_PASS)", "http://localhost:15672/api/aliveness-test/%2F"]
-          initialDelaySeconds: 30
-          timeoutSeconds: 10
-          # exec:
-          #   command: ["rabbitmqctl", "node_health_check", "|", "grep", "-q", "'^Health check passed'"]
-          # initialDelaySeconds: 10
-          # timeoutSeconds: 5
+            command: ["rabbitmqctl", "node_health_check", "|", "grep", "-q", "'^Health check passed'"]
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
       volumes:
       - name: mnesia-ramfs
         emptyDir:
