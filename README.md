@@ -16,6 +16,7 @@ The aim of this project is to make running kazoo in a dockerized environment eas
 
 Pull requests with improvements always welcome.
 
+
 ## Build Environment
 
 The build environment has been split off from this repo and now lives @ [https://github.com/sip-li/kazoo-builder](https://github.com/sip-li/kazoo-builder).  See the README.md file there for more details on the build environment.
@@ -75,24 +76,19 @@ Run environment variables are used in the entrypoint script to render configurat
 
 ## Extra tools
 
+### In container
+
 There is a binary called [kazoo-tool](kazoo-tool) in `~/bin`.  It contains the useful functions such as remote_console, upgrade, etc found in the original kazoo service file.  Since using service files in a docker container is largely a very bad idea, I've extracted the useful functions and adapted them to work in the container environment.
+
+### Outside container
+
+In the `scripts` directory, there are two scripts: `do-kube`, and `do-local` that allow you to run a sup command on a local or remote instance of kazoo as well as the basic initialization commands for a new kazoo cluster.
 
 
 ## Usage
 
-### Under docker (manual-build)
 
-If building and running locally, feel free to use the convenience targets in the included `Makefile`.
-
-* `make build`: rebuilds the docker image.
-* `make launch`: launch for testing.
-* `make logs`: tail the logs of the container.
-* `make shell`: exec's into the docker container interactively with tty and bash shell.
-* `make test`: test's the launched container.
-* *and many others...*
-
-
-### Under docker (pre-built)
+### Under docker
 
 All of our docker-* repos in github have CI pipelines that push to docker cloud/hub.  
 
