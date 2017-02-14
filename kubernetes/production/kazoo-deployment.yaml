@@ -6,27 +6,6 @@ metadata:
     app: kazoo
     project: valuphone
     environment: production
-  annotations:
-    pod.beta.kubernetes.io/init-containers: |-
-      [
-          {
-              "name": "kubewait",
-              "image": "callforamerica/kubewait",
-              "imagePullPolicy": "IfNotPresent",
-              "args": ["rabbitmq-alpha", "rabbitmq-beta", "couchdb"],
-              "env": [
-                  {
-                      "name": "NAMESPACE",
-                      "valueFrom": {
-                          "fieldRef": {
-                              "apiVersion": "v1",
-                              "fieldPath": "metadata.namespace"
-                          }
-                      }
-                  }
-              ]
-          }
-      ]
 spec:
   replicas: 1
   template:
@@ -35,6 +14,27 @@ spec:
         app: kazoo
         project: valuphone
         environment: production
+      annotations:
+        pod.beta.kubernetes.io/init-containers: |-
+          [
+              {
+                  "name": "kubewait",
+                  "image": "callforamerica/kubewait",
+                  "imagePullPolicy": "IfNotPresent",
+                  "args": ["rabbitmq-alpha", "rabbitmq-beta", "couchdb"],
+                  "env": [
+                      {
+                          "name": "NAMESPACE",
+                          "valueFrom": {
+                              "fieldRef": {
+                                  "apiVersion": "v1",
+                                  "fieldPath": "metadata.namespace"
+                              }
+                          }
+                      }
+                  ]
+              }
+          ]
     spec:
       containers:
       - name: kazoo
