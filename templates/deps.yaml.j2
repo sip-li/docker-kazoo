@@ -2,11 +2,13 @@
 target: kubernetes/testing/deps.yaml
 ---
 
-{%- for dep in ['rabbitmq', 'couchdb', 'freeswitch', 'kamailio'] -%}
+{%- set deps = ['rabbitmq', 'couchdb', 'freeswitch', 'kamailio'] -%}
+
+{%- for dep in deps -%}
 #
 # {{ dep|upper }}
 #
 ---
-{{ file('%s/../../docker-%s/kubernetes/testing/local.yaml' % (dirname, dep)) }}
+{{ file('../../docker-%s/kubernetes/testing/local.yaml' % dep) }}
 
 {% endfor -%}

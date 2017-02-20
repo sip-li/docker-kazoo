@@ -16,6 +16,10 @@ function create-master-account {
 	sup crossbar_maintenance create_account $ACCOUNT $REALM $ADMIN_USER $ADMIN_PASS
 }
 
+function get-master-account {
+	sup crossbar_maintenance find_account_by_name $ACCOUNT
+}
+
 function load-media {
 	sup kazoo_media_maintenance import_prompts $MEDIA_PATH $LANGUAGE
 }
@@ -24,21 +28,38 @@ function init-apps {
 	sup crossbar_maintenance init_apps $KAPPS_PATH $CROSSBAR_URI
 }
 
+function list-apps {
+	sup crossbar_maintenance apps
+}
+
 function add-fs-node {
 	sup ecallmgr_maintenance add_fs_node freeswitch@$FREESWITCH_HOST
+}
+
+function list-fs-nodes {
+	sup ecallmgr_maintenance list_fs_nodes
 }
 
 function allow-sbc {
 	sup ecallmgr_maintenance allow_sbc $KAMAILIO_HOST $KAMAILIO_IP
 }
 
-function get-master-account {
-	sup crossbar_maintenance find_account_by_name $ACCOUNT
+function sbc-acls {
+	sup ecallmgr_maintenance sbc_acls
+}
+
+
+function all {
+	create-master-account
+	load-media
+	init-apps
+	add-fs-node
+	allow-sbc
 }
 
 if [[ $1 ]]; then
     "$@"
 else
-    echo "usage: $(basename $0) {sup|test|create-master-acccount|load-media|init-apps|add-fs-node|allow-sbc|get-master-account}"
+    echo "usage: $(basename $0) {sup|test|create-master-acccount|get-master-account|load-media|init-apps|list-apps|add-fs-node|list-fs-nodes|allow-sbc|sbc-acls|all}"
     exit 1
 fi

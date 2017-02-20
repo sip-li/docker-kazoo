@@ -38,24 +38,26 @@ metadata:
     test: 'true'
     environment: testing
 spec:
+  type: NodePort
   selector:
     app: kazoo
   ports:
   - name: crossbar
-    protocol: TCP
     port: 8000
+    nodePort: 30800
   - name: ws-tcp
-    protocol: TCP
     port: 5555
+    nodePort: 30055
   - name: ws-udp
     protocol: UDP
     port: 5555
+    nodePort: 30055
   - name: fax-smtp
-    protocol: TCP
     port: 19025
+    nodePort: 30025
   - name: media-proxy
-    protocol: TCP
     port: 24517
+    nodePort: 30017
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
