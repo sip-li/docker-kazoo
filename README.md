@@ -1,25 +1,25 @@
 # Kazoo 4.0 w/ Kubernetes fixes & manifests
 
-[![Build Status](https://travis-ci.org/sip-li/docker-kazoo.svg?branch=master)](https://travis-ci.org/sip-li/docker-kazoo) [![Docker Pulls](https://img.shields.io/docker/pulls/callforamerica/kazoo.svg)](https://store.docker.com/community/images/callforamerica/kazoo)
+[![Build Status](https://travis-ci.org/sip-li/docker-kazoo.svg?branch=master)](https://travis-ci.org/sip-li/docker-kazoo) [![Docker Pulls](https://img.shields.io/docker/pulls/callforamerica/kazoo.svg)](https://hub.docker.com/r/callforamerica/kazoo/)
 
 ## Maintainer
+Joe Black | <joe@valuphone.com> | [github](https://github.com/joeblackwaslike)
 
-Joe Black <joeblack949@gmail.com>
 
 ## Description
-
 Minimal image with monster-ui apps.  This image uses a custom version of Debian Linux (Jessie) that I designed weighing in at ~22MB compressed.
 
-## Introduction
 
-The aim of this project is to make running kazoo in a dockerized environment easy for everyone and combine all the experience we've learned running kazoo in docker in a way that lowers the barrier of entry to others wanting to run kazoo under docker.  We target both a local docker only environment and a production environment using Kubernetes as a cluster manager.  We reccomend the same but also have made the effort to make this flexible enough to be usable under a variety of cluster managers or even none at all.
+## Introduction
+The aim of this project is combine or experience running kazoo in docker in a way that lowers the barrier of entry for others.
+
+We target a local docker only environment using docker-compose and a production environment using Kubernetes as the cluster manager.  We reccomend the same but effort has been made to ensure this image is flexible and contains enough environment variables to allow significant customization to your needs.
 
 Pull requests with improvements always welcome.
 
 
 ## Build Environment
-
-The build environment has been split off from this repo and now lives @ [https://github.com/sip-li/kazoo-builder](https://github.com/sip-li/kazoo-builder).  See the README.md file there for more details on the build environment.
+The build environment has been split off from this repo and now lives @ https://github.com/sip-li/kazoo-builder.  See the README.md file there for more details on the build environment.
 
 
 The following variables are standard in most of our dockerfiles to reduce duplication and make scripts reusable among different projects:
@@ -30,12 +30,11 @@ The following variables are standard in most of our dockerfiles to reduce duplic
 
 
 ## Run Environment
-
 Run environment variables are used in the entrypoint script to render configuration templates, perform flow control, etc.  These values can be overridden when inheriting from the base dockerfile, specified during `docker run`, or in kubernetes manifests in the `env` array.
 
 * `KAZOO_APPS`: a comma delimited list used directly by the kazoo_apps erlang vm as the list of default apps to start. Defaults to `blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks`.
 
-* `ERLANG_VM`: append `_app` to the end and passed to the `-s` argument in vm.args as well as used for the erlang node name. Defaults to `kazoo_apps`.
+* `ERLANG_VM`: `_app` is appended to the end and passed to the `-s` argument in vm.args as well as used for the erlang node name. Defaults to `kazoo_apps`.
 
 * `ERLANG_THREADS`: passed to the `+A` argument in vm.args.  Defaults to `64`.
 
@@ -71,26 +70,20 @@ Run environment variables are used in the entrypoint script to render configurat
 
 * `RABBITMQ_PASS`: interpolated as such `"amqp://user:pass@host:5672"` and used for all `uri` keys in the `amqp` section or the `amqp_uri` keys in the `zone` section of `config.ini`.  Defaults to `guest`.
 
-* `KAZOO_AMQP_HOSTS`: comma delimited list of hostnames or ip addresses that are split on comma's, interpolated as such `"amqp://user:pass@host:5672"`, and used to build a `amqp_uri` for the `zone` section of `config.ini`.  Defaults to `rabbitmq-alpha`.
+* `KAZOO_AMQP_HOSTS`: comma delimited list of hostnames or ip addresses that are split on comma's, interpolated as such `"amqp://{user}:{pass}@{host}:5672"`, and used to build a list of `amqp_uri`'s' for the `zone` section of `config.ini`.  Defaults to `rabbitmq`.
 
 
 ## Extra tools
-
 ### In container
-
 There is a binary called [kazoo-tool](kazoo-tool) in `~/bin`.  It contains the useful functions such as remote_console, upgrade, etc found in the original kazoo service file.  Since using service files in a docker container is largely a very bad idea, I've extracted the useful functions and adapted them to work in the container environment.
 
 ### Outside container
-
-In the `scripts` directory, there are two scripts: `do-kube`, and `do-local` that allow you to run a sup command on a local or remote instance of kazoo as well as the basic initialization commands for a new kazoo cluster.
+In the `scripts` directory, there are two scripts: `do-kube`, and `do-local` that allow you to run a sup command on a local or remote instance of kazoo as well as the basic initialization commands for a new kazoo cluster. Run either command without arguments for usage.
 
 
 ## Usage
-
-
 ### Under docker
-
-All of our docker-* repos in github have CI pipelines that push to docker cloud/hub.  
+All of our docker-* repos in github have CI pipelines that push to docker cloud/hub.
 
 This image is available at:
 * [https://store.docker.com/community/images/callforamerica/kazoo](https://store.docker.com/community/images/callforamerica/kazoo)
@@ -115,23 +108,15 @@ docker run -d \
 
 
 ### Under Kubernetes
+Edit the manifests under `kubernetes/<environment>` to reflect your specific environment and configuration.
 
-Edit the manifests under `kubernetes/` to reflect your specific environment and configuration.
-
-Create a secret for the erlang cookie:
+* Create a secret for the erlang cookie:
 ```bash
 kubectl create secret generic erlang-cookie --from-literal=erlang.cookie=$(LC_ALL=C tr -cd '[:alnum:]' < /dev/urandom | head -c 64)
 ```
-
 * Ensure secrets also exist for the rabbitmq and couchdb credentials, else supply them directly in the env array of the pod template.*
-* Ensure rabbitmq deployment and couchdb statefulset is running.  This container will be paused by the kubewait init container until it's dependencies exist and in the ready state.
-
-Deploy kazoo:
+* Ensure rabbitmq deployment and couchdb statefulset is running.  This container will be paused by the kubewait init-container until it's service dependencies exist and all pass readiness-checks.
+* Deploy kazoo:
 ```bash
-kubectl create -f kubernetes
+kubectl create -f kubernetes/<environment>
 ```
-
-
-## Issues
-
-**ref:**  [https://github.com/sip-li/docker-kazoo/issues](https://github.com/sip-li/docker-kazoo/issues)

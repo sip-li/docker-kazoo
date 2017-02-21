@@ -33,6 +33,7 @@ function list-apps {
 }
 
 function add-fs-node {
+	echo "adding node: freeswitch@$FREESWITCH_HOST"
 	sup ecallmgr_maintenance add_fs_node freeswitch@$FREESWITCH_HOST
 }
 
@@ -41,6 +42,7 @@ function list-fs-nodes {
 }
 
 function allow-sbc {
+	echo "adding label: $KAMAILIO_HOST ip: $KAMAILIO_IP"
 	sup ecallmgr_maintenance allow_sbc $KAMAILIO_HOST $KAMAILIO_IP
 }
 
@@ -48,13 +50,19 @@ function sbc-acls {
 	sup ecallmgr_maintenance sbc_acls
 }
 
-
 function all {
 	create-master-account
 	load-media
 	init-apps
 	add-fs-node
 	allow-sbc
+}
+
+function check {
+	get-master-account
+	list-apps
+	list-fs-nodes
+	sbc-acls
 }
 
 if [[ $1 ]]; then

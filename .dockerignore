@@ -8,3 +8,4 @@ scripts/
 *.rst
 *.env
 Makefile
+notes/local
