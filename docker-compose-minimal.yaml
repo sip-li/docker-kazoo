@@ -27,16 +27,42 @@ services:
       couchdb:
         condition: service_healthy
   rabbitmq-alpha:
-    extends:
-      file: ../docker-rabbitmq/docker-compose-ha.yaml
-      service: rabbitmq-alpha
+    container_name: rabbitmq-alpha
+    hostname: rabbitmq-alpha.local
+    environment:
+      ERLANG_COOKIE: test-cookie
+      RABBITMQ_USE_LONGNAME: 'true'
+    image: callforamerica/rabbitmq:latest
+    networks:
+      local:
+        aliases:
+        - rabbitmq-alpha.local
   rabbitmq-beta:
-    extends:
-      file: ../docker-rabbitmq/docker-compose-ha.yaml
-      service: rabbitmq-beta
+    container_name: rabbitmq-beta
+    hostname: rabbitmq-beta.local
+    environment:
+      ERLANG_COOKIE: test-cookie
+      RABBITMQ_USE_LONGNAME: 'true'
+    image: callforamerica/rabbitmq:latest
+    networks:
+      local:
+        aliases:
+        - rabbitmq-beta.local
   couchdb:
-    extends:
-      file: ../docker-couchdb/docker-compose.yaml
-      service: couchdb
+    container_name: couchdb
+    hostname: couchdb.local
+    image: callforamerica/couchdb:latest
+    environment:
+      LOCAL_DEV_CLUSTER: 'true'
+      COUCHDB_ADMIN_USER: admin
+      COUCHDB_ADMIN_PASS: secret
+      ERLANG_COOKIE: test-cookie
+    ports:
+    - "5984:5984"
+    - "5986:5986"
+    networks:
+      local:
+        aliases:
+        - couchdb.local
 networks:
   local:

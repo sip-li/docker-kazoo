@@ -1,6 +1,6 @@
 # Kazoo 4.0 w/ Kubernetes fixes & manifests
 
-[![Build Status](https://travis-ci.org/sip-li/docker-kazoo.svg?branch=master)](https://travis-ci.org/sip-li/docker-kazoo) [![Docker Pulls](https://img.shields.io/docker/pulls/callforamerica/kazoo.svg)](https://hub.docker.com/r/callforamerica/kazoo/)
+[![Build Status](https://travis-ci.org/sip-li/docker-kazoo.svg?branch=master)](https://travis-ci.org/sip-li/docker-kazoo) [![Docker Pulls](https://img.shields.io/docker/pulls/callforamerica/kazoo.svg)](https://hub.docker.com/r/callforamerica/kazoo/) [![Size/Layers](https://images.microbadger.com/badges/image/callforamerica/kazoo.svg)](https://microbadger.com/images/callforamerica/kazoo)
 
 ## Maintainer
 Joe Black | <joe@valuphone.com> | [github](https://github.com/joeblackwaslike)
@@ -23,7 +23,6 @@ The build environment has been split off from this repo and now lives @ https://
 
 
 The following variables are standard in most of our dockerfiles to reduce duplication and make scripts reusable among different projects:
-
 * `APP`: kazoo
 * `USER`: kazoo
 * `HOME` /opt/kazoo
@@ -88,8 +87,7 @@ All of our docker-* repos in github have CI pipelines that push to docker cloud/
 This image is available at:
 * [https://store.docker.com/community/images/callforamerica/kazoo](https://store.docker.com/community/images/callforamerica/kazoo)
 *  [https://hub.docker.com/r/callforamerica/kazoo](https://hub.docker.com/r/callforamerica/kazoo).
-
-and through docker itself: `docker pull callforamerica/kazoo`
+* `docker pull callforamerica/kazoo`
 
 To run:
 
@@ -100,6 +98,8 @@ docker run -d \
     -e "COUCHDB_HOST=bigcouch.local" \
     -e "KAZOO_AMQP_HOSTS=rabbitmq-alpha.local,rabbitmq-beta.local" \
     -e "KAZOO_LOG_LEVEL=debug" \
+    -e "KAZOO_APPS=blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks" \
+    -e "ERLANG_COOKIE=test-cookie" \
     -p "8000:8000" \
     callforamerica/kazoo
 ```
@@ -107,16 +107,37 @@ docker run -d \
 **NOTE:** Please reference the Run Environment section for the list of available environment variables.
 
 
+### Under docker-compose
+Pull the images
+```bash
+docker-compose pull
+```
+
+Start application and dependencies
+```bash
+# start in foreground
+docker-compose up --abort-on-container-exit
+
+# start in background
+docker-compose up -d
+```
+
+
 ### Under Kubernetes
 Edit the manifests under `kubernetes/<environment>` to reflect your specific environment and configuration.
 
-* Create a secret for the erlang cookie:
+Create a secret for the erlang cookie:
 ```bash
 kubectl create secret generic erlang-cookie --from-literal=erlang.cookie=$(LC_ALL=C tr -cd '[:alnum:]' < /dev/urandom | head -c 64)
 ```
-* Ensure secrets also exist for the rabbitmq and couchdb credentials, else supply them directly in the env array of the pod template.*
-* Ensure rabbitmq deployment and couchdb statefulset is running.  This container will be paused by the kubewait init-container until it's service dependencies exist and all pass readiness-checks.
-* Deploy kazoo:
+
+Ensure secrets also exist for the rabbitmq and couchdb credentials, else supply them directly in the env array of the pod template.*
+
+
+Ensure rabbitmq deployment and couchdb statefulset is running.  This container will be paused by the kubewait init-container until it's service dependencies exist and all pass readiness-checks.
+
+
+Deploy kazoo:
 ```bash
 kubectl create -f kubernetes/<environment>
 ```

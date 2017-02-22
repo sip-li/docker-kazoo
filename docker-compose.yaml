@@ -9,7 +9,12 @@ services:
         KAZOO_VERSION: '4.0'
         KAZOO_BUILD_NUMBER: '8'
     image: "callforamerica/kazoo:${TAG:-latest}"
-    env_file: default.env
+    environment:
+      KAZOO_AMQP_HOSTS: rabbitmq-alpha.local,rabbitmq-beta.local
+      COUCHDB_HOST: couchdb.local
+      KAZOO_LOG_LEVEL: info
+      KAZOO_APPS: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks
+      ERLANG_COOKIE: test-cookie
     ports:
     - "5555:5555"
     - "8000:8000"
@@ -27,27 +32,80 @@ services:
       couchdb:
         condition: service_healthy
   rabbitmq-alpha:
-    extends:
-      file: ../docker-rabbitmq/docker-compose-ha.yaml
-      service: rabbitmq-alpha
+    container_name: rabbitmq-alpha
+    hostname: rabbitmq-alpha.local
+    environment:
+      ERLANG_COOKIE: test-cookie
+      RABBITMQ_USE_LONGNAME: 'true'
+    image: callforamerica/rabbitmq:latest
+    networks:
+      local:
+        aliases:
+        - rabbitmq-alpha.local
   rabbitmq-beta:
-    extends:
-      file: ../docker-rabbitmq/docker-compose-ha.yaml
-      service: rabbitmq-beta
-  couchdb:
-    extends:
-      file: ../docker-couchdb/docker-compose.yaml
-      service: couchdb
+    container_name: rabbitmq-beta
+    hostname: rabbitmq-beta.local
+    environment:
+      ERLANG_COOKIE: test-cookie
+      RABBITMQ_USE_LONGNAME: 'true'
+    image: callforamerica/rabbitmq:latest
+    networks:
+      local:
+        aliases:
+        - rabbitmq-beta.local
   freeswitch:
-    extends:
-      file: ../docker-freeswitch/docker-compose.yaml
-      service: freeswitch
+    container_name: freeswitch
+    hostname: freeswitch.local
+    image: callforamerica/freeswitch:latest
+    environment:
+      FREESWITCH_DISABLE_NAT_DETECTION: 'false'
+      FREESWITCH_RTP_START_PORT: 16384
+      FREESWITCH_RTP_END_PORT: 16484
+      ERLANG_COOKIE: test-cookie
+    ports:
+    - "11000:10000"
+    - "11000:10000/udp"
+    - "16384-16484:16384-16484/udp"
+    - "8021:8021"
+    - "8031:8031"
+    networks:
+      local:
+        aliases:
+        - freeswitch.local
+    cap_add:
+    - IPC_LOCK
+    - NET_ADMIN
+    - NET_RAW
+    - NET_BROADCAST
+    - SYS_NICE
+    - SYS_RESOURCE
+  couchdb:
+    container_name: couchdb
+    hostname: couchdb.local
+    image: callforamerica/couchdb:latest
+    environment:
+      LOCAL_DEV_CLUSTER: 'true'
+      COUCHDB_ADMIN_USER: admin
+      COUCHDB_ADMIN_PASS: secret
+      ERLANG_COOKIE: test-cookie
+    ports:
+    - "5984:5984"
+    - "5986:5986"
+    networks:
+      local:
+        aliases:
+        - couchdb.local
   kamailio:
     container_name: kamailio
     hostname: kamailio.valuphone.local
     build: .
-    image: callforamerica/kamailio:${TAG:-latest}
-    env_file: default.env
+    image: callforamerica/kamailio:latest
+    environment:
+      KAMAILIO_LOG_LEVEL: info
+      KAMAILIO_ENABLE_ROLES: websockets,message,presence_query,presence_sync,presence_notify_sync,registrar_sync
+      KAMAILIO_AMQP_HOSTS: rabbitmq-alpha.local,rabbitmq-beta.local
+      SYNC_FREESWITCH_SOURCE: dns
+      SYNC_FREESWITCH_ARGS: freeswitch.local
     ports:
     - "5060-5061:5060-5061"
     - "5060:5060/udp"
