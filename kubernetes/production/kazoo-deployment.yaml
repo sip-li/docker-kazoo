@@ -4,7 +4,7 @@ metadata:
   name: kazoo
   labels:
     app: kazoo
-    project: valuphone
+    project: telephoneorg
     environment: production
 spec:
   replicas: 1
@@ -12,45 +12,37 @@ spec:
     metadata:
       labels:
         app: kazoo
-        project: valuphone
+        project: telephoneorg
         environment: production
-      annotations:
-        pod.beta.kubernetes.io/init-containers: |-
-          [
-              {
-                  "name": "kubewait",
-                  "image": "callforamerica/kubewait",
-                  "imagePullPolicy": "IfNotPresent",
-                  "args": ["rabbitmq-alpha", "rabbitmq-beta", "couchdb"],
-                  "env": [
-                      {
-                          "name": "NAMESPACE",
-                          "valueFrom": {
-                              "fieldRef": {
-                                  "apiVersion": "v1",
-                                  "fieldPath": "metadata.namespace"
-                              }
-                          }
-                      }
-                  ]
-              }
-          ]
     spec:
+      initContainers:
+      - name: kubewait
+        image: telephoneorg/kubewait
+        imagePullPolicy: IfNotPresent
+        args:
+        - rabbitmq
+        - couchdb
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
       containers:
       - name: kazoo
-        image: callforamerica/kazoo
+        image: telephoneorg/kazoo
         imagePullPolicy: Always
         env:
+        - name: ERLANG_HOSTNAME
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo
+              key: erlang.hostname
         - name: KUBE_HOSTNAME_FIX
           valueFrom:
             configMapKeyRef:
               name: kazoo
               key: kube.hostname.fix
-        - name: USE_LONG_HOSTNAME
-          valueFrom:
-            configMapKeyRef:
-              name: kazoo
-              key: kube.use-long-hostname
         - name: ERLANG_THREADS
           valueFrom:
             configMapKeyRef:
@@ -59,17 +51,17 @@ spec:
         - name: ERLANG_COOKIE
           valueFrom:
             secretKeyRef:
-              name: erlang-cookie
+              name: erlang
               key: erlang.cookie
         - name: RABBITMQ_USER
           valueFrom:
             secretKeyRef:
-              name: rabbitmq-creds
+              name: rabbitmq
               key: rabbitmq.user
         - name: RABBITMQ_PASS
           valueFrom:
             secretKeyRef:
-              name: rabbitmq-creds
+              name: rabbitmq
               key: rabbitmq.pass
         - name: COUCHDB_HOST
           valueFrom:
@@ -79,24 +71,24 @@ spec:
         - name: COUCHDB_USER
           valueFrom:
             secretKeyRef:
-              name: couchdb-creds
+              name: couchdb
               key: couchdb.user
         - name: COUCHDB_PASS
           valueFrom:
             secretKeyRef:
-              name: couchdb-creds
+              name: couchdb
               key: couchdb.pass
         - name: REGION
           valueFrom:
             configMapKeyRef:
-              name: environment
+              name: kazoo
               key: region
         - name: DATACENTER
           valueFrom:
             configMapKeyRef:
-              name: environment
+              name: kazoo
               key: datacenter
-        - name: KAZOO_AMQP_HOSTS
+        - name: RABBITMQ_HOSTS
           valueFrom:
             configMapKeyRef:
               name: kazoo
@@ -130,11 +122,11 @@ spec:
           containerPort: 24517
         resources:
           requests:
-            cpu: 4
-            memory: 4Gi
+            cpu: 2
+            memory: 2Gi
           limits:
-            cpu: 4
-            memory: 4Gi
+            cpu: 2
+            memory: 2Gi
         readinessProbe:
           httpGet:
             path: /

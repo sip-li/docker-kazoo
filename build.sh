@@ -2,43 +2,52 @@
 
 set -e
 
-KAZOO_RELEASE_VERSION=${KAZOO_VERSION}-${KAZOO_BUILD_NUMBER}
-
 # Use local cache proxy if it can be reached, else nothing.
 eval $(detect-proxy enable)
 
 build::user::create $USER
 
-apt-get -q update
-
 
 log::m-info "Installing essentials ..."
-apt-get install -qq -y \
+apt-get update -qq
+apt-get install -yqq \
 	ca-certificates \
-	curl
+	curl \
+	jq
 
 
-log::m-info "Downloading $APP build: $KAZOO_RELEASE_VERSION ..."
+KAZOO_RELEASE_DATA=$(curl -sSL https://api.github.com/repos/telephoneorg/kazoo-builder/releases/latest)
+KAZOO_RELEASE_TAG=$(jq -r '.tag_name' <(echo $KAZOO_RELEASE_DATA))
+KAZOO_RELEASE_DATE=$(jq -r '.published_at' <(echo $KAZOO_RELEASE_DATA))
+KAZOO_RELEASE_DOWNLOAD_URL=$(jq -r '.assets[].browser_download_url' <(echo $KAZOO_RELEASE_DATA))
+
+log::m-info "Downloading $APP Release ..."
+echo -e "  branch: 	  $KAZOO_RELEASE_TAG
+  published:  $KAZOO_RELEASE_DATE
+  from: 	  $KAZOO_RELEASE_DOWNLOAD_URL
+"
+
 pushd /opt
-    curl -sSL \
-		https://github.com/sip-li/kazoo-builder/releases/download/${KAZOO_RELEASE_VERSION}/kazoo.tar.gz \
-        | tar xzf - --strip-components=1 -C .
+	curl -sSL $KAZOO_RELEASE_DOWNLOAD_URL \
+		| tar xzf - --strip-components=1 -C .
 	popd
 
 
+log::m-info "Removing jq ..."
+apt-get purge -y --auto-remove jq
+
+
 log::m-info "Installing $APP dependencies ..."
-apt-get install -qq -y \
+apt-get install -yqq \
 	expat \
 	htmldoc \
 	libexpat1-dev \
+	libssl1.0.2 \
 	libssl-dev \
 	libncurses5-dev \
 	libxslt-dev \
+	openssl \
     zlib1g-dev
-
-
-log::m-info "Removing unnecessary packages ..."
-apt-get purge -y --auto-remove ca-certificates
 
 
 log::m-info "linking kazoo-configs ..."

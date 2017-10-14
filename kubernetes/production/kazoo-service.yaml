@@ -4,12 +4,12 @@ metadata:
   name: kazoo
   labels:
     app: kazoo
-    project: valuphone
+    project: telephoneorg
     environment: production
 spec:
   selector:
     app: kazoo
-    project: valuphone
+    project: telephoneorg
     environment: production
   ports:
   - name: crossbar

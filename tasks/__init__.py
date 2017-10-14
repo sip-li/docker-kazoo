@@ -2,10 +2,10 @@ import os
 
 from invoke import task, Collection
 
-from . import test, kube
+from . import test, dc, kube
 
 
-collections = [test, kube]
+collections = [test, dc, kube]
 
 ns = Collection()
 for c in collections:
@@ -17,7 +17,12 @@ ns.configure(dict(
     pwd=os.getcwd(),
     docker=dict(
         user=os.getenv('DOCKER_USER'),
-        tag='%s/%s:latest' % (os.getenv('DOCKER_USER'), 'kazoo')
+        org=os.getenv('DOCKER_ORG', os.getenv('DOCKER_USER', 'telephoneorg')),
+        name='kazoo',
+        tag='%s/%s:latest' % (
+            os.getenv('DOCKER_ORG', os.getenv('DOCKER_USER', 'telephoneorg')), 'kazoo'
+        ),
+        shell='bash'
     ),
     kube=dict(
         environment='testing'

@@ -1,17 +1,22 @@
-# Kazoo 4.0 w/ Kubernetes fixes & manifests
+# Kazoo 4.x (Open Source)
+## w/ Kubernetes fixes & manifests
+[![Build Status](https://travis-ci.org/telephoneorg/docker-kazoo.svg?branch=master)](https://travis-ci.org/telephoneorg/docker-kazoo) [![Docker Pulls](https://img.shields.io/docker/pulls/telephoneorg/kazoo.svg)](https://hub.docker.com/r/telephoneorg/kazoo/) [![Size/Layers](https://images.microbadger.com/badges/image/telephoneorg/kazoo.svg)](https://microbadger.com/images/telephoneorg/kazoo) [![Github Repo](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/telephoneorg/docker-couchdb)
 
-[![Build Status](https://travis-ci.org/sip-li/docker-kazoo.svg?branch=master)](https://travis-ci.org/sip-li/docker-kazoo) [![Docker Pulls](https://img.shields.io/docker/pulls/callforamerica/kazoo.svg)](https://hub.docker.com/r/callforamerica/kazoo/) [![Size/Layers](https://images.microbadger.com/badges/image/callforamerica/kazoo.svg)](https://microbadger.com/images/callforamerica/kazoo)
 
 ## Maintainer
-Joe Black | <joe@valuphone.com> | [github](https://github.com/joeblackwaslike)
+Joe Black | <me@joeblack.nyc> | [github](https://github.com/joeblackwaslike)
 
 
 ## Description
-Minimal image with monster-ui apps.  This image uses a custom version of Debian Linux (Jessie) that I designed weighing in at ~22MB compressed.
+Minimal image with kazoo, monster-ui, monster-apps, & kazoo-sounds.  This image uses a custom, minimal version of Debian Linux.
+
+##### Useful links:
+* 2600hz Github: https://github.com/2600hz/kazoo
+* 4.2.x sup-commands: https://gist.github.com/joeblackwaslike/345b9eb3b81d6033d26aaf1953c0f4fe
 
 
 ## Introduction
-The aim of this project is combine or experience running kazoo in docker in a way that lowers the barrier of entry for others.
+The aim of this project is combine or experience running Kazoo in docker in a way that lowers the barrier of entry for others.
 
 We target a local docker only environment using docker-compose and a production environment using Kubernetes as the cluster manager.  We reccomend the same but effort has been made to ensure this image is flexible and contains enough environment variables to allow significant customization to your needs.
 
@@ -19,10 +24,10 @@ Pull requests with improvements always welcome.
 
 
 ## Build Environment
-The build environment has been split off from this repo and now lives @ https://github.com/sip-li/kazoo-builder.  See the README.md file there for more details on the build environment.
+The build environment has been split off from this repo and now lives @ https://github.com/telephoneorg/kazoo-builder.  See the README.md file there for more details on the build environment.
 
 
-The following variables are standard in most of our dockerfiles to reduce duplication and make scripts reusable among different projects:
+The following variables are standard in most of our Dockerfiles to reduce duplication and make scripts reusable among different projects:
 * `APP`: kazoo
 * `USER`: kazoo
 * `HOME` /opt/kazoo
@@ -69,15 +74,15 @@ Run environment variables are used in the entrypoint script to render configurat
 
 * `RABBITMQ_PASS`: interpolated as such `"amqp://user:pass@host:5672"` and used for all `uri` keys in the `amqp` section or the `amqp_uri` keys in the `zone` section of `config.ini`.  Defaults to `guest`.
 
-* `KAZOO_AMQP_HOSTS`: comma delimited list of hostnames or ip addresses that are split on comma's, interpolated as such `"amqp://{user}:{pass}@{host}:5672"`, and used to build a list of `amqp_uri`'s' for the `zone` section of `config.ini`.  Defaults to `rabbitmq`.
+* `RABBITMQ_HOSTS`: comma delimited list of hostnames or ip addresses that are split on comma's, interpolated as such `"amqp://{user}:{pass}@{host}:5672"`, and used to build a list of `amqp_uri`'s' for the `zone` section of `config.ini`.  Defaults to `rabbitmq`.
 
 
 ## Extra tools
 ### In container
-There is a binary called [kazoo-tool](kazoo-tool) in `~/bin`.  It contains the useful functions such as remote_console, upgrade, etc found in the original kazoo service file.  Since using service files in a docker container is largely a very bad idea, I've extracted the useful functions and adapted them to work in the container environment.
+There is a binary called [kazoo-tool](build/kazoo-tool) in `~/bin`.  It contains the useful functions such as remote_console, upgrade, etc found in the original kazoo service file.  Since using service files in a docker container is largely a very bad idea, I've extracted the useful functions and adapted them to work in the container environment.
 
 ### Outside container
-In the `scripts` directory, there are two scripts: `do-kube`, and `do-local` that allow you to run a sup command on a local or remote instance of kazoo as well as the basic initialization commands for a new kazoo cluster. Run either command without arguments for usage.
+In the [scripts](scripts) directory, there are two scripts: `do-kube`, and `do-local` that allow you to run a sup command on a local or remote instance of kazoo as well as the basic initialization commands for a new kazoo cluster. Run either command without arguments for usage.
 
 
 ## Usage
@@ -85,23 +90,22 @@ In the `scripts` directory, there are two scripts: `do-kube`, and `do-local` tha
 All of our docker-* repos in github have CI pipelines that push to docker cloud/hub.
 
 This image is available at:
-* [https://store.docker.com/community/images/callforamerica/kazoo](https://store.docker.com/community/images/callforamerica/kazoo)
-*  [https://hub.docker.com/r/callforamerica/kazoo](https://hub.docker.com/r/callforamerica/kazoo).
-* `docker pull callforamerica/kazoo`
+* [https://store.docker.com/community/images/telephoneorg/kazoo](https://store.docker.com/community/images/telephoneorg/kazoo)
+*  [https://hub.docker.com/r/telephoneorg/kazoo](https://hub.docker.com/r/telephoneorg/kazoo).
+* `docker pull telephoneorg/kazoo`
 
 To run:
-
 ```bash
 docker run -d \
     --name kazoo \
     -h kazoo.local \
     -e "COUCHDB_HOST=bigcouch.local" \
-    -e "KAZOO_AMQP_HOSTS=rabbitmq-alpha.local,rabbitmq-beta.local" \
+    -e "KAZOO_AMQP_HOSTS=rabbitmq-alpha.local" \
     -e "KAZOO_LOG_LEVEL=debug" \
     -e "KAZOO_APPS=blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks" \
     -e "ERLANG_COOKIE=test-cookie" \
     -p "8000:8000" \
-    callforamerica/kazoo
+    telephoneorg/kazoo
 ```
 
 **NOTE:** Please reference the Run Environment section for the list of available environment variables.
@@ -128,13 +132,12 @@ Edit the manifests under `kubernetes/<environment>` to reflect your specific env
 
 Create a secret for the erlang cookie:
 ```bash
-kubectl create secret generic erlang-cookie --from-literal=erlang.cookie=$(LC_ALL=C tr -cd '[:alnum:]' < /dev/urandom | head -c 64)
+kubectl create secret generic erlang --from-literal=erlang.cookie=$(LC_ALL=C tr -cd '[:alnum:]' < /dev/urandom | head -c 64)
 ```
 
-Ensure secrets also exist for the rabbitmq and couchdb credentials, else supply them directly in the env array of the pod template.*
-
-
-Ensure rabbitmq deployment and couchdb statefulset is running.  This container will be paused by the kubewait init-container until it's service dependencies exist and all pass readiness-checks.
+Ensure that:
+* Secrets exist for the `rabbitmq` and `couchdb` credentials, otherwise supply them directly in the env array of the pod template.
+* rabbitmq deployment and couchdb statefulset is running.  This container will be paused by the kubewait init-container until it's service dependencies exist and pass readiness-checks.
 
 
 Deploy kazoo:

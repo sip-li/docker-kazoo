@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-: ${HOST:=minikube.valuphone.local}
+: ${HOST:=kube.valuphone.com}
 : ${POD:=$(kubectl get po -l app=kazoo --no-headers | awk '{print $1}')}
 
 : ${FREESWITCH_HOST:=$HOST}
 : ${KAMAILIO_HOST:=$HOST}
-: ${KAMAILIO_IP:=$(minikube ip)}
+: ${KAMAILIO_IP:=$(dig +short kube.valuphone.com)}
 
 function sup {
 	kubectl exec $POD -- sup "$@"

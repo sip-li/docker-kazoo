@@ -28,8 +28,7 @@ class TestKazooBasic(ContainerTestMixin, unittest.TestCase):
     name = 'kazoo'
     tear_down = False
     test_patterns = [
-        r"successfully connected to 'amqp://guest:guest@rabbitmq-alpha\.local",
-        r"successfully connected to 'amqp://guest:guest@rabbitmq-beta\.local",
+        r"successfully connected to 'amqp://guest:guest@rabbitmq\.local",
         r'connected successfully to http://couchdb\.local:5984',
         r'connected successfully to http://couchdb\.local:5986',
         r"setting kazoo_apps cookie to 'test-cookie'",
@@ -51,7 +50,7 @@ class TestKazooBasic(ContainerTestMixin, unittest.TestCase):
         """Assert correct amqp_uri's in /etc/kazoo/core/config.ini"""
         cmd = 'cat /etc/kazoo/core/config.ini'
         output = self.container.exec(cmd, output_only=True)
-        amqp_hosts = self.container.env['KAZOO_AMQP_HOSTS'].split(',')
+        amqp_hosts = self.container.env['RABBITMQ_HOSTS'].split(',')
         patterns = [r'amqp://guest:guest@%s:5672' % h
                     for h in amqp_hosts]
         for pattern in patterns:

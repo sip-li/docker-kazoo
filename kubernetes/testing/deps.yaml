@@ -5,7 +5,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: rabbitmq-creds
+  name: rabbitmq
   labels:
     app: rabbitmq
     test: 'true'
@@ -18,7 +18,7 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: erlang-cookie
+  name: erlang
   labels:
     app: rabbitmq
     test: 'true'
@@ -36,10 +36,9 @@ metadata:
     test: 'true'
     environment: testing
 data:
+  erlang.hostname: long
   kube.hostname.fix: 'true'
-  kube.use-long-hostname: 'true'
   rabbitmq.log.level: info
-  rabbitmq.use-longname: 'true'
 ---
 kind: Service
 apiVersion: v1
@@ -77,24 +76,19 @@ spec:
     spec:
       containers:
       - name: rabbitmq
-        image: callforamerica/rabbitmq:latest
-        imagePullPolicy: IfNotPresent
+        image: telephoneorg/rabbitmq:latest
+        imagePullPolicy: Always
         env:
+        - name: ERLANG_HOSTNAME
+          valueFrom:
+            configMapKeyRef:
+              name: rabbitmq
+              key: erlang.hostname
         - name: KUBE_HOSTNAME_FIX
           valueFrom:
             configMapKeyRef:
               name: rabbitmq
               key: kube.hostname.fix
-        - name: RABBITMQ_USE_LONGNAME
-          valueFrom:
-            configMapKeyRef:
-              name: rabbitmq
-              key: rabbitmq.use-longname
-        - name: USE_LONG_HOSTNAME
-          valueFrom:
-            configMapKeyRef:
-              name: rabbitmq
-              key: kube.use-long-hostname
         - name: RABBITMQ_LOG_LEVEL
           valueFrom:
             configMapKeyRef:
@@ -103,17 +97,17 @@ spec:
         - name: RABBITMQ_DEFAULT_USER
           valueFrom:
             secretKeyRef:
-              name: rabbitmq-creds
+              name: rabbitmq
               key: rabbitmq.user
         - name: RABBITMQ_DEFAULT_PASS
           valueFrom:
             secretKeyRef:
-              name: rabbitmq-creds
+              name: rabbitmq
               key: rabbitmq.pass
         - name: ERLANG_COOKIE
           valueFrom:
             secretKeyRef:
-              name: erlang-cookie
+              name: erlang
               key: erlang.cookie
         ports:
         - name: amqp
@@ -146,20 +140,20 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: couchdb-creds
+  name: couchdb
   labels:
     app: couchdb
     test: 'true'
     environment: testing
 type: Opaque
 data:
-  couchdb.pass: RVZCNklCQVhWMTlUWEtlQWZ4dWRUQkk0RVk3dzljaWk=
   couchdb.user: Y29sbGFib3JhdGU=
+  couchdb.pass: RVZCNklCQVhWMTlUWEtlQWZ4dWRUQkk0RVk3dzljaWk=
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: erlang-cookie
+  name: erlang
   labels:
     app: couchdb
     test: 'true'
@@ -171,13 +165,87 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: couchdb-templates
+  labels:
+    app: couchdb
+    test: 'true'
+    environment: testing
+data:
+  local.ini.j2: |
+    ---
+    target: /config/local.ini
+    ---
+    {% set config_map = env.get('CONFIG_MAP', 'couchdb') %}
+    {% set config = kube.get('configmap', config_map).data -%}
+
+    [couchdb]
+    database_dir = {{ config.get('couchdb.data-dir', '/volumes/couchdb/data') }}
+    view_index_dir = {{ config.get('couchdb.data-dir', '/volumes/couchdb/data') }}
+
+    [chttpd]
+    require_valid_user = {{ config.get('couchdb.require-valid-user', 'true') }}
+    port = {{ config.get('couchdb.port', '5984') }}
+    bind_address = 0.0.0.0
+
+    [httpd]
+    require_valid_user = {{ config.get('couchdb.require-valid-user', 'true') }}
+    port = {{ config.get('couchdb.port', '5986') }}
+    bind_address = 0.0.0.0
+
+    [cluster]
+    q={{ config.get('couchdb.shards', '2') }}
+    n={{ config.get('couchdb.replicas', '1') }}
+    r={{ config.get('couchdb.read-quorum', '1') }}
+    w={{ config.get('couchdb.write-quorum', '1') }}
+
+    [couch_httpd_auth]
+    iterations = 1000
+
+    [log]
+    level = {{ config.get('couchdb.log.level', 'info').lower() }}
+  vm.args.j2: |
+    ---
+    target: /config/vm.args
+    ---
+    {% set config_map = env.get('CONFIG_MAP', 'couchdb') %}
+    {% set config = kube.get('configmap', config_map).data -%}
+
+    # Turn off the sasl error logger
+    -sasl sasl_error_logger false
+
+    # Use the following erlang hostname
+    {% if config.get('erlang.hostname') == 'long' %}
+    -name couchdb
+    {% else %}
+    -sname couchdb
+    {% endif %}
+
+    # Use kernel poll functionality if supported by emulator
+    +K true
+
+    # Start a pool of asynchronous IO threads
+    +A {{ config.get('erlang.threads', '25') }}
+
+    # Turn off the kernel error_logger
+    -kernel error_logger silent
+
+    # Set erlang distribution to use 11500-11999 ports instead of random
+    # predictibility has value here
+    -kernel inet_dist_listen_min 11500 inet_dist_listen_max 11999
+
+    # Comment this line out if you want the Erlang shell
+    +Bd -noinput
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: couchdb
   labels:
     app: couchdb
     test: 'true'
     environment: testing
 data:
-  kube.use-long-hostname: 'true'
+  erlang.hostname: long
   erlang.threads: '25'
   couchdb.log.level: info
   couchdb.require-valid-user: 'false'
@@ -186,6 +254,30 @@ data:
   couchdb.read-quorum: '1'
   couchdb.write-quorum: '2'
   couchdiscover.log.level: info
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: couchdb-healthz
+data:
+  liveness.yaml: |
+    http:
+      http://localhost:5984/_up/:
+        status: 200
+        allow-insecure: false
+        no-follow-redirects: false
+        timeout: 5000
+        body:
+        - '{"status":"ok"}'
+  readiness.yaml: |
+    http:
+      http://localhost:5984/_up/:
+        status: 200
+        allow-insecure: false
+        no-follow-redirects: false
+        timeout: 5000
+        body:
+        - '{"status":"ok"}'
 ---
 kind: Service
 apiVersion: v1
@@ -234,7 +326,7 @@ metadata:
     environment: testing
 spec:
   serviceName: couchdb
-  replicas: 3
+  replicas: 2
   template:
     metadata:
       labels:
@@ -242,67 +334,41 @@ spec:
         test: 'true'
         environment: testing
     spec:
-      terminationGracePeriodSeconds: 30
+      terminationGracePeriodSeconds: 0
+      initContainers:
+      - name: config
+        image: telephoneorg/tmpld
+        args:
+        - tmpld /templates/*.j2
+        volumeMounts:
+        - name: templates
+          mountPath: /templates
+        - name: config
+          mountPath: /config
       containers:
       - name: couchdb
-        image: callforamerica/couchdb:latest
-        imagePullPolicy: IfNotPresent
+        image: telephoneorg/couchdb:latest
         env:
-        - name: USE_LONG_HOSTNAME
+        - name: ERLANG_HOSTNAME
           valueFrom:
             configMapKeyRef:
               name: couchdb
-              key: kube.use-long-hostname
+              key: erlang.hostname
         - name: COUCHDB_ADMIN_USER
           valueFrom:
             secretKeyRef:
-              name: couchdb-creds
+              name: couchdb
               key: couchdb.user
         - name: COUCHDB_ADMIN_PASS
           valueFrom:
             secretKeyRef:
-              name: couchdb-creds
+              name: couchdb
               key: couchdb.pass
         - name: ERLANG_COOKIE
           valueFrom:
             secretKeyRef:
-              name: erlang-cookie
+              name: erlang
               key: erlang.cookie
-        - name: ERLANG_THREADS
-          valueFrom:
-            configMapKeyRef:
-              name: couchdb
-              key: erlang.threads
-        - name: COUCHDB_LOG_LEVEL
-          valueFrom:
-            configMapKeyRef:
-              name: couchdb
-              key: couchdb.log.level
-        - name: COUCHDB_REQUIRE_VALID_USER
-          valueFrom:
-            configMapKeyRef:
-              name: couchdb
-              key: couchdb.require-valid-user
-        - name: COUCHDB_SHARDS
-          valueFrom:
-            configMapKeyRef:
-              name: couchdb
-              key: couchdb.shards
-        - name: COUCHDB_REPLICAS
-          valueFrom:
-            configMapKeyRef:
-              name: couchdb
-              key: couchdb.replicas
-        - name: COUCHDB_READ_QUORUM
-          valueFrom:
-            configMapKeyRef:
-              name: couchdb
-              key: couchdb.read-quorum
-        - name: COUCHDB_WRITE_QUORUM
-          valueFrom:
-            configMapKeyRef:
-              name: couchdb
-              key: couchdb.write-quorum
         ports:
         - name: data
           containerPort: 5984
@@ -310,22 +376,45 @@ spec:
           containerPort: 5986
         readinessProbe:
           httpGet:
-            path: /
-            port: 5984
-          initialDelaySeconds: 10
-          timeoutSeconds: 3
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 2
           successThreshold: 1
           failureThreshold: 5
         livenessProbe:
           httpGet:
-            path: /
-            port: 5984
+            path: /healthz
+            port: 8081
           initialDelaySeconds: 15
-          timeoutSeconds: 3
+          timeoutSeconds: 2
           successThreshold: 1
           failureThreshold: 5
+      - name: healthz-ready
+        image: telephoneorg/goss
+        imagePullPolicy: IfNotPresent
+        command:
+        - healthz
+        ports:
+        - name: healthz-ready
+          containerPort: 8080
+        volumeMounts:
+        - name: healthz
+          mountPath: /goss
+      - name: healthz-live
+        image: telephoneorg/goss
+        imagePullPolicy: IfNotPresent
+        command:
+        - healthz
+        - liveness
+        ports:
+        - name: healthz-live
+          containerPort: 8081
+        volumeMounts:
+        - name: healthz
+          mountPath: /goss
       - name: couchdiscover
-        image: callforamerica/couchdiscover:latest
+        image: telephoneorg/couchdiscover
         imagePullPolicy: IfNotPresent
         env:
         - name: LOG_LEVEL
@@ -333,6 +422,15 @@ spec:
             configMapKeyRef:
               name: couchdb
               key: couchdiscover.log.level
+      volumes:
+      - name: templates
+        configMap:
+          name: couchdb-templates
+      - name: config
+        emptyDir: {}
+      - name: healthz
+        configMap:
+          name: couchdb-healthz
       restartPolicy: Always
 
 #
@@ -342,7 +440,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: erlang-cookie
+  name: erlang
   labels:
     app: freeswitch
     test: 'true'
@@ -360,13 +458,10 @@ metadata:
     test: 'true'
     environment: testing
 data:
-  kube.search-domains.add: 'true'
   freeswitch.log.level: info
   freeswitch.log.color: 'true'
-  freeswitch.rtp.start-port: '16384'
-  freeswitch.rtp.end-port: '32768'
+  freeswitch.rtp.port-range: '16384-32768'
   freeswitch.disable-nat-detection: 'false'
-  freeswitch.skip-sounds: 'false'
   freeswitch.tls.enable: 'false'
 ---
 apiVersion: v1
@@ -382,8 +477,8 @@ spec:
   selector:
     app: freeswitch
   ports:
-  - name: event-socket
-    port: 8021
+  # - name: event-socket
+  #   port: 8021
   - name: mod-kazoo
     port: 8031
   - name: sip
@@ -409,7 +504,7 @@ spec:
       hostNetwork: true
       containers:
       - name: freeswitch
-        image: callforamerica/freeswitch:latest
+        image: telephoneorg/freeswitch
         imagePullPolicy: IfNotPresent
         securityContext:
           capabilities:
@@ -421,15 +516,10 @@ spec:
             - SYS_NICE
             - SYS_RESOURCE
         env:
-        - name: KUBE_SEARCH_DOMAINS_ADD
-          valueFrom:
-            configMapKeyRef:
-              name: freeswitch
-              key: kube.search-domains.add
         - name: ERLANG_COOKIE
           valueFrom:
             secretKeyRef:
-              name: erlang-cookie
+              name: erlang
               key: erlang.cookie
         - name: FREESWITCH_LOG_LEVEL
           valueFrom:
@@ -441,16 +531,11 @@ spec:
             configMapKeyRef:
               name: freeswitch
               key: freeswitch.log.color
-        - name: FREESWITCH_RTP_START_PORT
+        - name: FREESWITCH_RTP_PORT_RANGE
           valueFrom:
             configMapKeyRef:
               name: freeswitch
-              key: freeswitch.rtp.start-port
-        - name: FREESWITCH_RTP_END_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: freeswitch
-              key: freeswitch.rtp.end-port
+              key: freeswitch.rtp.port-range
         - name: FREESWITCH_DISABLE_NAT_DETECTION
           valueFrom:
             configMapKeyRef:
@@ -462,8 +547,8 @@ spec:
               name: freeswitch
               key: freeswitch.tls.enable
         ports:
-        - name: event-socket
-          containerPort:  8021
+        # - name: event-socket
+        #   containerPort:  8021
         - name: mod-kazoo
           containerPort:  8031
         - name: sip
@@ -491,6 +576,7 @@ spec:
         emptyDir:
           medium: Memory
       restartPolicy: Always
+      dnsPolicy: ClusterFirstWithHostNet
 
 #
 # KAMAILIO
@@ -505,16 +591,14 @@ metadata:
     test: 'true'
     environment: testing
 data:
-  kube.search-domains.add: 'true'
   kamailio.log.level: info
   kamailio.log.color: 'true'
-  kamailio.amqp.hosts: rabbitmq
+  rabbitmq.hosts: rabbitmq
   kamailio.shm-memory: '128'
   kamailio.pkg-memory: '8'
-  kamailio.child-proc: '8'
   kamailio.enable-roles: websockets,message,presence_query,presence_sync,presence_notify_sync,registrar_sync
-  sync.freeswitch.source: kubernetes
-  sync.freeswitch.args: freeswitch
+  freeswitch.sync.source: kubernetes
+  freeswitch.sync.args: freeswitch
 ---
 apiVersion: v1
 kind: Service
@@ -572,32 +656,24 @@ spec:
         app: kamailio
         test: 'true'
         environment: testing
-      annotations:
-        pod.beta.kubernetes.io/init-containers: |-
-          [
-              {
-                  "name": "kubewait",
-                  "image": "callforamerica/kubewait",
-                  "imagePullPolicy": "IfNotPresent",
-                  "args": ["rabbitmq", "freeswitch"],
-                  "env": [
-                      {
-                          "name": "NAMESPACE",
-                          "valueFrom": {
-                              "fieldRef": {
-                                  "apiVersion": "v1",
-                                  "fieldPath": "metadata.namespace"
-                              }
-                          }
-                      }
-                  ]
-              }
-          ]
     spec:
       hostNetwork: true
+      initContainers:
+      - name: kubewait
+        image: telephoneorg/kubewait
+        imagePullPolicy: IfNotPresent
+        args:
+        - rabbitmq
+        - freeswitch
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
       containers:
       - name: kamailio
-        image: callforamerica/kamailio:latest
+        image: telephoneorg/kamailio:latest
         imagePullPolicy: IfNotPresent
         securityContext:
           capabilities:
@@ -609,25 +685,20 @@ spec:
             - SYS_NICE
             - SYS_RESOURCE
         env:
-        - name: KUBE_SEARCH_DOMAINS_ADD
+        - name: RABBITMQ_HOSTS
           valueFrom:
             configMapKeyRef:
               name: kamailio
-              key: kube.search-domains.add
-        - name: KAMAILIO_AMQP_HOSTS
-          valueFrom:
-            configMapKeyRef:
-              name: kamailio
-              key: kamailio.amqp.hosts
+              key: rabbitmq.hosts
         - name: RABBITMQ_USER
           valueFrom:
             secretKeyRef:
-              name: rabbitmq-creds
+              name: rabbitmq
               key: rabbitmq.user
         - name: RABBITMQ_PASS
           valueFrom:
             secretKeyRef:
-              name: rabbitmq-creds
+              name: rabbitmq
               key: rabbitmq.pass
         - name: KAMAILIO_LOG_LEVEL
           valueFrom:
@@ -644,16 +715,16 @@ spec:
             configMapKeyRef:
               name: kamailio
               key: kamailio.enable-roles
-        - name: SYNC_FREESWITCH_SOURCE
+        - name: FREESWITCH_SYNC_SOURCE
           valueFrom:
             configMapKeyRef:
               name: kamailio
-              key: sync.freeswitch.source
-        - name: SYNC_FREESWITCH_ARGS
+              key: freeswitch.sync.source
+        - name: FREESWITCH_SYNC_ARGS
           valueFrom:
             configMapKeyRef:
               name: kamailio
-              key: sync.freeswitch.args
+              key: freeswitch.sync.args
         - name: KAMAILIO_SHM_MEMORY
           valueFrom:
             configMapKeyRef:
@@ -664,11 +735,6 @@ spec:
             configMapKeyRef:
               name: kamailio
               key: kamailio.pkg-memory
-        - name: KAMAILIO_CHILD_PROC
-          valueFrom:
-            configMapKeyRef:
-              name: kamailio
-              key: kamailio.child-proc
         ports:
         - name: sip-tcp
           containerPort: 5060
@@ -709,11 +775,12 @@ spec:
           successThreshold: 1
           failureThreshold: 5
         volumeMounts:
-        - name: volumes-ram
-          mountPath: /volumes/kamailio/dbtext
+        - name: db
+          mountPath: /volumes/kamailio/db
       volumes:
-      - name: volumes-ram
+      - name: db
         emptyDir:
           medium: Memory
       restartPolicy: Always
+      dnsPolicy: ClusterFirstWithHostNet
 

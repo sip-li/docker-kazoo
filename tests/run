@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 base=$(dirname $0)
-image=callforamerica/testdocker
+image=telephoneorg/testdocker
 
 if [[ -f $base/vars.env ]]; then
     source $base/vars.env

@@ -1,20 +1,12 @@
-FROM callforamerica/debian
+FROM telephoneorg/debian:stretch
 
-MAINTAINER Joe Black <joeblack949@gmail.com>
+MAINTAINER Joe Black <me@joeblack.nyc>
 
-ARG     KAZOO_VERSION
-ARG     KAZOO_BUILD_NUMBER
+ARG     KAZOO_BRANCH
 
-ENV     ERLANG_VERSION 18.3
-ENV     KAZOO_VERSION ${KAZOO_VERSION:-4.0}
-ENV     KAZOO_BUILD_NUMBER ${KAZOO_BUILD_NUMBER:-8}
-ENV     MONSTER_APPS_VERSION 4.0
-ENV     MONSTER_APPS accounts,callflows,fax,numbers,pbxs,voip,voicemails,webhooks
+ENV     KAZOO_BRANCH ${KAZOO_BRANCH:-4.2}
 
-LABEL   lang.erlang.version=$ERLANG_VERSION
-LABEL   app.kazoo.version=$KAZOO_VERSION
-LABEL   app.monster-apps.version=$MONSTER_APPS_VERSION
-LABEL   app.monster-apps.apps="${MONSTER_APPS},apiexplorer"
+LABEL   app.kazoo.core.branch=$KAZOO_BRANCH
 
 ENV     APP kazoo
 ENV     USER $APP
@@ -24,23 +16,18 @@ COPY    build.sh /tmp/
 RUN     /tmp/build.sh
 
 COPY    entrypoint /
-COPY    build/kazoo-tool $HOME/bin/
+COPY    build/kazoo-tool /usr/local/bin/
 COPY    build/sup /usr/local/bin/
 
 ENV     ERL_MAX_PORTS 65536
 ENV     ERLANG_VM kazoo_apps
 ENV     ERLANG_THREADS 64
-
-ENV     USE_LONG_HOSTNAME true
+ENV     ERLANG_HOSTNAME long
 
 # options: debug info notice warning error critical alert emergency
 ENV     KAZOO_LOG_LEVEL info
 ENV     KAZOO_LOG_COLOR true
-
 ENV     KAZOO_APPS blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks
-
-ENV     KAZOO_SASL_ERRLOG_TYPE error
-ENV     KAZOO_SASL_ERROR_LOGGER tty
 
 ENV     COUCHDB_HOST couchdb
 ENV     COUCHDB_DATA_PORT 5984

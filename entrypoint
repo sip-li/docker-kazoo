@@ -31,12 +31,29 @@ set -e
 : readonly ${COUCHDB_DATA_PORT:=5984}
 : readonly ${COUCHDB_ADMIN_PORT:=5986}
 : readonly ${COUCHDB_COMPACT_AUTOMATICALLY:=true}
-: readonly ${COUCHDB_USER:=admin}
-: readonly ${COUCHDB_PASS:=secret}
+: readonly ${COUCHDB_USER:=}
+: readonly ${COUCHDB_PASS:=}
 
-: readonly ${KAZOO_AMQP_HOSTS:=rabbitmq}
+: readonly ${RABBITMQ_HOSTS:=rabbitmq}
+: readonly ${KAZOO_KAPPS_HOSTS:=rabbitmq}
+
 : readonly ${RABBITMQ_USER:=guest}
 : readonly ${RABBITMQ_PASS:=guest}
+
+# sources: env, kube
+: readonly ${KAZOO_CONFIG_SOURCE:=env}
+: readonly ${KAZOO_HOSTS:=rabbitmq}
+
+# zone's (cluster's) have:
+#   name       name = "z100"
+#   amqp_uri   amqp_uri = "amqp://guest:guest@10.100.30.1"
+
+
+# kazoo_apps (apps servers) have:
+#    cookie     cookie = change_me
+#    zone       zone = "z100"
+#    fqdn       host = "kazoo1.z100.somedomain.com"
+
 
 
 log::m-info "Writing $APP sys.config ..."
@@ -109,19 +126,19 @@ EOF
 
 
 log::m-info "Writing $APP config.ini ..."
-tee  /etc/kazoo/core/config.ini <<EOF
+cat > /etc/kazoo/core/config.ini <<EOF
 [zone]
 name = $KAZOO_ZONE
-$(kazoo::build-amqp-uri-list "$KAZOO_AMQP_HOSTS" 'amqp_uri')
+$(kazoo::build-amqp-uri-list "$RABBITMQ_HOSTS" 'amqp_uri')
 
 [bigcouch]
 ip = "$COUCHDB_HOST"
-username = "$COUCHDB_USER"
-password = "$COUCHDB_PASS"
 port = $COUCHDB_DATA_PORT
 admin_port = $COUCHDB_ADMIN_PORT
 cookie = $ERLANG_COOKIE
 compact_automatically = $COUCHDB_COMPACT_AUTOMATICALLY
+;;;username = "$COUCHDB_USER"
+;;;password = "$COUCHDB_PASS"
 
 [kazoo_apps]
 host = $PUBLIC_FQDN
@@ -131,6 +148,14 @@ zone = $KAZOO_ZONE
 [log]
 console = $KAZOO_LOG_LEVEL
 EOF
+
+# if COUCHDB_USER + COUCHDB_PASS non-empty unescape the username and password
+# above.
+
+if [[ ! -z $COUCHDB_USER && ! -z $COUCHDB_PASS ]]; then
+    sed -i 's/^\;\;\;//g' /etc/kazoo/core/config.ini
+fi
+cat /etc/kazoo/core/config.ini
 
 
 log::m-info "Ensuring permissions ..."

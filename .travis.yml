@@ -1,10 +1,14 @@
 language: python
+python:
+- "3.6"
 services: docker
 env:
   global:
-  - DOCKER_USER=callforamerica
+  - DOCKER_USER=joeblackwaslike
+  - DOCKER_ORG=telephoneorg
   # DOCKER_PASS
   - secure: "nkFUhXSpa0I2YDqKauxDvTClysqbbqAbQH1PkGR5aTc+v8CVlE3XosdUFO8wpohnWHDjqBrCwL6Xa3chMyboxk+EVZWKCdyVtJ15KTBvPfcLnEbCD/ZCwk7L9BpHtTTXuYbP9RREdXVNke29S2ohN/Dt9TYN06sOBMuEuLjNxSACc7n3N7/vmQ+MXjuKV0HdOW3plXVvbdiP30QeowC9K9R8igUXc+gt9FIOqq+qh2oKhOTwIObJ1Sc/HcD0c2G+TFFFZaaJ5kZ8AfJXO8FCO2C2KLLOyIqmGLTgOIrxzXEawBCgU8khjR0P8Qkvj+J/eEwJrsqZ2H1y+eJSvnnb9Y3VFX/ElrErWs6LccbObo/XDY/QbirtenKnMdX9Iz3zwRI46TjziYrpLdUkVEr4xhebSdI49T2k3UJx7KhFgzfY+I634X1M7VaSD+JLGBwaQ5PDTwMZQGCAYQ93QfnAF7iYRg/2zv1AJcl1OJ4AP/iblbSZU2a9R7qypMNQcoimqgGaIfL+rjFucbcEdZLyxHlP1I+rAsJ1g2ZCdmAu22SErVLU8oIygs6+Qo4sk4Xip4aVYCaoGupTC/oU+msVzkPBiM8V2JrC77wU9qe2/Dal8zUrcWl3kpRgfdxUps2sCT94oSUKyalZGpVbYFk/FsdfxzBoLDpTXT92R/PDx9c="
+
 notifications:
   email:
     on_success: never
@@ -16,15 +20,15 @@ notifications:
     on_failure: always
 
 before_install:
-- pip install --upgrade docker-compose
 - source scripts/ci/environment.sh
-- clone-deps rabbitmq couchdb freeswitch kamailio
-- pull-deps rabbitmq couchdb freeswitch kamailio
+- pip install --upgrade docker-compose
+- pip install invoke
 
-install: docker-compose build kazoo
+install: inv dc.build
 
-script: tests/run
+script: inv test
 
 after_success:
 - ci-tag-build
 - hub-push
+- hub-update-readme

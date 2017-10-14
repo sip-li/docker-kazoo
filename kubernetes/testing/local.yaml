@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: erlang-cookie
+  name: erlang
   labels:
     app: kazoo
     test: 'true'
@@ -19,15 +19,16 @@ metadata:
     test: 'true'
     environment: testing
 data:
+  erlang.hostname: long
   kube.hostname.fix: 'true'
   datacenter: sl
   region: east
   erlang.threads: '64'
   couchdb.host: couchdb-lb
+  rabbitmq.hosts: rabbitmq
   kazoo.apps: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks
   kazoo.log.level: info
   kazoo.log.color: 'true'
-  kazoo.amqp.hosts: rabbitmq
 ---
 apiVersion: v1
 kind: Service
@@ -75,33 +76,30 @@ spec:
         app: kazoo
         test: 'true'
         environment: testing
-      annotations:
-        pod.beta.kubernetes.io/init-containers: |-
-          [
-              {
-                  "name": "kubewait",
-                  "image": "callforamerica/kubewait",
-                  "imagePullPolicy": "IfNotPresent",
-                  "args": ["rabbitmq", "couchdb"],
-                  "env": [
-                      {
-                          "name": "NAMESPACE",
-                          "valueFrom": {
-                              "fieldRef": {
-                                  "apiVersion": "v1",
-                                  "fieldPath": "metadata.namespace"
-                              }
-                          }
-                      }
-                  ]
-              }
-          ]
     spec:
+      initContainers:
+      - name: kubewait
+        image: telephoneorg/kubewait
+        imagePullPolicy: IfNotPresent
+        args:
+        - rabbitmq
+        - couchdb
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
       containers:
       - name: kazoo
-        image: callforamerica/kazoo:latest
+        image: telephoneorg/kazoo:latest
         imagePullPolicy: IfNotPresent
         env:
+        - name: ERLANG_HOSTNAME
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo
+              key: erlang.hostname
         - name: KUBE_HOSTNAME_FIX
           valueFrom:
             configMapKeyRef:
@@ -115,17 +113,17 @@ spec:
         - name: ERLANG_COOKIE
           valueFrom:
             secretKeyRef:
-              name: erlang-cookie
+              name: erlang
               key: erlang.cookie
         - name: RABBITMQ_USER
           valueFrom:
             secretKeyRef:
-              name: rabbitmq-creds
+              name: rabbitmq
               key: rabbitmq.user
         - name: RABBITMQ_PASS
           valueFrom:
             secretKeyRef:
-              name: rabbitmq-creds
+              name: rabbitmq
               key: rabbitmq.pass
         - name: COUCHDB_HOST
           valueFrom:
@@ -135,12 +133,12 @@ spec:
         - name: COUCHDB_USER
           valueFrom:
             secretKeyRef:
-              name: couchdb-creds
+              name: couchdb
               key: couchdb.user
         - name: COUCHDB_PASS
           valueFrom:
             secretKeyRef:
-              name: couchdb-creds
+              name: couchdb
               key: couchdb.pass
         - name: REGION
           valueFrom:
@@ -152,7 +150,7 @@ spec:
             configMapKeyRef:
               name: kazoo
               key: datacenter
-        - name: KAZOO_AMQP_HOSTS
+        - name: RABBITMQ_HOSTS
           valueFrom:
             configMapKeyRef:
               name: kazoo

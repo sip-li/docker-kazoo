@@ -1,15 +1,16 @@
-version: '2.1'
+version: '2.2'
 services:
   kazoo:
     container_name: kazoo
     hostname: kazoo.local
-    build:
-      context: .
-      args:
-        KAZOO_VERSION: '4.0'
-        KAZOO_BUILD_NUMBER: '8'
-    image: "callforamerica/kazoo:${TAG:-latest}"
-    env_file: default.env
+    build: .
+    image: telephoneorg/kazoo:${TAG:-latest}
+    env:
+      ERLANG_HOSTNAME: long
+      RABBITMQ_HOSTS: rabbitmq.local
+      COUCHDB_HOST: couchdb.local
+      KAZOO_LOG_LEVEL: info
+      ERLANG_COOKIE: test-cookie
     ports:
     - "5555:5555"
     - "8000:8000"
@@ -20,46 +21,31 @@ services:
         aliases:
         - kazoo.local
     depends_on:
-      rabbitmq-alpha:
-        condition: service_healthy
-      rabbitmq-beta:
+      rabbitmq:
         condition: service_healthy
       couchdb:
         condition: service_healthy
-  rabbitmq-alpha:
-    container_name: rabbitmq-alpha
-    hostname: rabbitmq-alpha.local
+  rabbitmq:
+    container_name: rabbitmq
+    hostname: rabbitmq.local
     environment:
+      ERLANG_HOSTNAME: long
       ERLANG_COOKIE: test-cookie
-      RABBITMQ_USE_LONGNAME: 'true'
-    image: callforamerica/rabbitmq:latest
+    image: telephoneorg/rabbitmq:latest
     networks:
       local:
         aliases:
-        - rabbitmq-alpha.local
-  rabbitmq-beta:
-    container_name: rabbitmq-beta
-    hostname: rabbitmq-beta.local
-    environment:
-      ERLANG_COOKIE: test-cookie
-      RABBITMQ_USE_LONGNAME: 'true'
-    image: callforamerica/rabbitmq:latest
-    networks:
-      local:
-        aliases:
-        - rabbitmq-beta.local
+        - rabbitmq.local
   couchdb:
     container_name: couchdb
     hostname: couchdb.local
-    image: callforamerica/couchdb:latest
+    image: telephoneorg/couchdb:latest
     environment:
-      LOCAL_DEV_CLUSTER: 'true'
-      COUCHDB_ADMIN_USER: admin
-      COUCHDB_ADMIN_PASS: secret
+      ERLANG_HOSTNAME: long
+      COUCHDB_DEV_INIT: 'true'
+      # COUCHDB_ADMIN_USER: admin
+      # COUCHDB_ADMIN_PASS: secret
       ERLANG_COOKIE: test-cookie
-    ports:
-    - "5984:5984"
-    - "5986:5986"
     networks:
       local:
         aliases:
