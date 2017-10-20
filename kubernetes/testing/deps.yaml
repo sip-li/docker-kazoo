@@ -193,10 +193,10 @@ data:
     bind_address = 0.0.0.0
 
     [cluster]
-    q={{ config.get('couchdb.shards', '2') }}
-    n={{ config.get('couchdb.replicas', '1') }}
-    r={{ config.get('couchdb.read-quorum', '1') }}
-    w={{ config.get('couchdb.write-quorum', '1') }}
+    q = {{ config.get('couchdb.shards', '3') }}
+    n = {{ config.get('couchdb.replicas', '1') }}
+    r = {{ config.get('couchdb.read-quorum', '1') }}
+    w = {{ config.get('couchdb.write-quorum', '1') }}
 
     [couch_httpd_auth]
     iterations = 1000
@@ -477,8 +477,6 @@ spec:
   selector:
     app: freeswitch
   ports:
-  # - name: event-socket
-  #   port: 8021
   - name: mod-kazoo
     port: 8031
   - name: sip
@@ -547,8 +545,6 @@ spec:
               name: freeswitch
               key: freeswitch.tls.enable
         ports:
-        # - name: event-socket
-        #   containerPort:  8021
         - name: mod-kazoo
           containerPort:  8031
         - name: sip
@@ -596,7 +592,7 @@ data:
   rabbitmq.hosts: rabbitmq
   kamailio.shm-memory: '128'
   kamailio.pkg-memory: '8'
-  kamailio.enable-roles: websockets,message,presence_query,presence_sync,presence_notify_sync,registrar_sync
+  kamailio.enable-roles: websockets,message,presence_query,presence_notify_sync,registrar_sync
   freeswitch.sync.source: kubernetes
   freeswitch.sync.args: freeswitch
 ---
@@ -762,14 +758,22 @@ spec:
           containerPort: 7001
         readinessProbe:
           exec:
-            command: ["kamctl", "monitor", "1", "|", "grep -q", "^Up"]
+            command:
+            - goss
+            - -g
+            - /goss/goss.yaml
+            - validate
           initialDelaySeconds: 10
           timeoutSeconds: 3
           successThreshold: 1
           failureThreshold: 5
         livenessProbe:
           exec:
-            command: ["kamctl", "monitor", "1", "|", "grep -q", "^Up"]
+            command:
+            - goss
+            - -g
+            - /goss/goss.yaml
+            - validate
           initialDelaySeconds: 10
           timeoutSeconds: 3
           successThreshold: 1

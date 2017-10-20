@@ -3,10 +3,6 @@
 base=$(dirname $0)
 image=telephoneorg/testdocker
 
-if [[ -f $base/vars.env ]]; then
-    source $base/vars.env
-    export $(cut -d'=' -f1 $base/vars.env | xargs)
-fi
 
 if [[ $1 == 'local' ]]; then
     echo "Running tests locally ..."
@@ -14,7 +10,6 @@ if [[ $1 == 'local' ]]; then
 else
     docker pull $image
     docker run -it --rm \
-    	--env-file $base/vars.env \
         -v /var/run/docker.sock:/var/run/docker.sock \
     	-v $(pwd):/repos/app \
         $image \

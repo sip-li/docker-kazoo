@@ -12,15 +12,6 @@ from testdocker import (
     Container
 )
 
-class SupCommand(CommandBase):
-    def __init__(self, module, function, *args):
-        cmd = ['sup']
-        cmd.append(module)
-        cmd.append(function)
-        if args:
-            cmd.extend(args)
-        self.cmd = ' '.join(cmd)
-
 
 class TestKazooBasic(ContainerTestMixin, unittest.TestCase):
     """Run basic tests on kazoo container."""
@@ -136,64 +127,6 @@ class TestKazooBasic(ContainerTestMixin, unittest.TestCase):
         parser.read_string(output)
         self.assertEqual(parser.get('log', 'console'),
                          self.container.env['KAZOO_LOG_LEVEL']
-        )
-
-
-class TestKazooExtended(ContainerTestMixinBase, unittest.TestCase):
-    """Run extended tests on kazoo container."""
-
-    name = 'kazoo'
-    tear_down = False
-
-    def test_sup_create_master_account(self):
-        """Assert sup crossbar_maintenance create_account was successful."""
-        cmd = SupCommand('crossbar_maintenance', 'create_account', 'test', 'localhost', 'admin', 'secret')
-        exit_code, output = self.container.exec(cmd)
-        self.assertEqual(exit_code, 0)
-        output = output.split('\n')
-        self.assertRegex(output[0], r'^created new account')
-        self.assertRegex(output[1], r'^created new account admin user')
-        self.assertRegex(output[2], r'^promoting account')
-        self.assertRegex(output[3], r'^updating master account id in system_config.accounts')
-
-    def test_sup_load_media(self):
-        """Assert sup kazoo_media_maintenance import_prompts was successful."""
-        cmd = SupCommand('kazoo_media_maintenance', 'import_prompts', '/opt/kazoo/media/prompts/en/us', 'en-us')
-        exit_code, output = self.container.exec(cmd)
-        output = output.split('\n')
-        self.assertEqual(exit_code, 0)
-        self.assertGreater(len(output), 1)
-        self.assertRegex(output[-2], r'^importing went successfully')
-
-    def test_sup_init_apps(self):
-        """Assert sup crossbar_maintenance init_apps was successful."""
-        cmd = SupCommand('crossbar_maintenance', 'init_apps', '/var/www/html/monster-ui/apps', 'http://localhost:8000/v2')
-        exit_code, output = self.container.exec(cmd)
-        output = output.split('\n')
-        self.assertEqual(exit_code, 0)
-        self.assertGreater(len(output), 4)
-
-    def test_sup_add_freeswitch_node(self):
-        """Assert sup ecallmgr_maintenance add_fs_node was successful."""
-        cmd = SupCommand('ecallmgr_maintenance', 'add_fs_node', 'freeswitch@freeswitch.local')
-        exit_code, output = self.container.exec(cmd)
-        self.assertEqual(exit_code, 0)
-        self.assertGreater(len(output), 1)
-        self.assertRegex(output, r'adding freeswitch@')
-
-    def test_sup_add_sbc(self):
-        """Assert sup ecallmgr_maintenance allow_sbc was successful."""
-        kamailio = Container('kamailio')
-        kamailio_host = 'kamailio.valuphone.local'
-        cmd = SupCommand('ecallmgr_maintenance', 'allow_sbc', kamailio_host, kamailio.ip)
-        exit_code, output = self.container.exec(cmd)
-        self.assertEqual(exit_code, 0)
-        self.assertGreater(len(output), 1)
-        self.assertRegex(
-            output,
-            r'updating authoritative ACLs %s\(%s\/32\) to allow traffic' % (
-                kamailio_host, kamailio.ip
-            )
         )
 
 

@@ -28,8 +28,8 @@ echo -e "  branch: 	  $KAZOO_RELEASE_TAG
 "
 
 pushd /opt
-	curl -sSL $KAZOO_RELEASE_DOWNLOAD_URL \
-		| tar xzf - --strip-components=1 -C .
+	curl -sL $KAZOO_RELEASE_DOWNLOAD_URL \
+		| tar xz --strip-components=1 -C .
 	popd
 
 
@@ -47,7 +47,8 @@ apt-get install -yqq \
 	libncurses5-dev \
 	libxslt-dev \
 	openssl \
-    zlib1g-dev
+    zlib1g-dev \
+	iputils-ping
 
 
 log::m-info "linking kazoo-configs ..."
@@ -75,6 +76,17 @@ erlang-cookie write
 
 # ref: http://erlang.org/doc/apps/erts/crash_dump.html
 erlang::set-erl-dump
+
+if linux::cap::is-enabled 'sys_resource'; then
+    echo "setting ulimits ..."
+    set-limits kazoo
+else
+    linux::cap::show-warning 'sys_resource'
+fi
+
+if linux::cap::is-disabled 'sys_nice'; then
+    linux::cap::show-warning 'sys_nice'
+fi
 EOF
 
 
@@ -92,6 +104,9 @@ ERTS_VERSION=$(cat ~/releases/RELEASES | head -1 | cut -d',' -f4 | xargs)
 LD_LIBRARY_PATH=$HOME/erts-$(cat ~/releases/RELEASES | head -1 | cut -d',' -f4 | xargs)/lib:\$LD_LIBRARY_PATH
 ERTS_LIB_DIR=$HOME/lib
 EOF
+
+
+
 
 
 log::m-info "Adding /etc/kazoo to fixattrs.d ..."

@@ -1,0 +1,2 @@
+images/couchdb-data/*.tar.gz filter=lfs diff=lfs merge=lfs -text
+images/couchdb-data-preset/*.tar.gz filter=lfs diff=lfs merge=lfs -text

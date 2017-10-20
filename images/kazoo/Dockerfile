@@ -15,19 +15,21 @@ ENV     HOME /opt/$APP
 COPY    build.sh /tmp/
 RUN     /tmp/build.sh
 
+COPY    kazoo.limits.conf /etc/security/limits.d/
 COPY    entrypoint /
-COPY    build/kazoo-tool /usr/local/bin/
-COPY    build/sup /usr/local/bin/
+COPY    kazoo-tool /usr/local/bin/
+COPY    sup /usr/local/bin/
 
 ENV     ERL_MAX_PORTS 65536
 ENV     ERLANG_VM kazoo_apps
 ENV     ERLANG_THREADS 64
+ENV     ERLANG_PROCESSES 134217727
 ENV     ERLANG_HOSTNAME long
 
 # options: debug info notice warning error critical alert emergency
 ENV     KAZOO_LOG_LEVEL info
 ENV     KAZOO_LOG_COLOR true
-ENV     KAZOO_APPS blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks
+ENV     KAZOO_APPS blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,tasks,teletype,trunkstore,webhooks
 
 ENV     COUCHDB_HOST couchdb
 ENV     COUCHDB_DATA_PORT 5984
@@ -47,7 +49,7 @@ EXPOSE  5555 5555/udp 8000 19025 24517
 
 WORKDIR $HOME
 
-SHELL       ["/bin/bash"]
+SHELL       ["/bin/bash", "-lc"]
 HEALTHCHECK --interval=15s --timeout=5s \
     CMD curl -f -s http://localhost:8000 || exit 1
 

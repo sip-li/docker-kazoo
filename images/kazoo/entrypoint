@@ -16,7 +16,9 @@ set -e
 : readonly ${KAZOO_APPS:=blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks}
 
 : readonly ${ERLANG_VM:=kazoo_apps}
-: readonly ${ERLANG_THREADS:=64}
+# : readonly ${ERLANG_THREADS:=64}
+: declare -ir ${ERLANG_THREADS:=$(( $(nproc) * 8 ))}
+: declare -ir ${ERLANG_PROCESSES:=134217727}
 : readonly ${ERLANG_COOKIE:=insecure-cookie}
 
 # options: debug info notice warning error critical alert emergency
@@ -35,25 +37,9 @@ set -e
 : readonly ${COUCHDB_PASS:=}
 
 : readonly ${RABBITMQ_HOSTS:=rabbitmq}
-: readonly ${KAZOO_KAPPS_HOSTS:=rabbitmq}
 
 : readonly ${RABBITMQ_USER:=guest}
 : readonly ${RABBITMQ_PASS:=guest}
-
-# sources: env, kube
-: readonly ${KAZOO_CONFIG_SOURCE:=env}
-: readonly ${KAZOO_HOSTS:=rabbitmq}
-
-# zone's (cluster's) have:
-#   name       name = "z100"
-#   amqp_uri   amqp_uri = "amqp://guest:guest@10.100.30.1"
-
-
-# kazoo_apps (apps servers) have:
-#    cookie     cookie = change_me
-#    zone       zone = "z100"
-#    fqdn       host = "kazoo1.z100.somedomain.com"
-
 
 
 log::m-info "Writing $APP sys.config ..."
@@ -120,6 +106,9 @@ $(erlang::vmargs::get-name "$ERLANG_VM")
 # Enable SMP
 -smp enable
 
+# Maximum number of processes
++P $ERLANG_PROCESSES
+
 # Erlang VM to boot
 -s ${ERLANG_VM}_app
 EOF
@@ -151,7 +140,6 @@ EOF
 
 # if COUCHDB_USER + COUCHDB_PASS non-empty unescape the username and password
 # above.
-
 if [[ ! -z $COUCHDB_USER && ! -z $COUCHDB_PASS ]]; then
     sed -i 's/^\;\;\;//g' /etc/kazoo/core/config.ini
 fi

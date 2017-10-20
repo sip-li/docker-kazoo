@@ -11,9 +11,8 @@ data:
   kube.hostname.fix: 'true'
   datacenter: sl
   region: east
-  erlang.threads: '64'
   couchdb.host: couchdb-lb
   rabbitmq.hosts: rabbitmq
-  kazoo.apps: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks
+  kazoo.apps: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,tasks,teletype,trunkstore,webhooks
   kazoo.log.level: info
   kazoo.log.color: 'true'

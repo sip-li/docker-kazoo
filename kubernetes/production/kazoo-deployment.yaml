@@ -43,11 +43,6 @@ spec:
             configMapKeyRef:
               name: kazoo
               key: kube.hostname.fix
-        - name: ERLANG_THREADS
-          valueFrom:
-            configMapKeyRef:
-              name: kazoo
-              key: erlang.threads
         - name: ERLANG_COOKIE
           valueFrom:
             secretKeyRef:

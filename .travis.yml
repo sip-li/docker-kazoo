@@ -26,10 +26,21 @@ before_install:
 
 install: inv dc.build
 
-# script: inv test
-script: true
+script: inv test
 
 after_success:
 - ci-tag-build
-- hub-push
-- hub-update-readme
+- inv hub.push
+- inv hub.update-readme
+
+deploy:
+  provider: releases
+  api_key:
+    secure: p7a0iK9Ej3+DBhsxDjJKFQuGkpoVtt9FbedOc6mWTvIhxWUTnYoC60w4SUiuWg+A4fbUu+9SZYjFqQowQaFbDJKQfgBiM/DWD65n9FCZgYx9nRZ+fgqrHldKo9nElBMWfWk5KL/RRavB9YKSh+B5yCJAQiEMZn9K5QVL4uuRIXSEs5aLVKsrsNJJR7Wxs5D3UvmbkAxaSJhPfBAj5m1uSkrn6AzOZBJQ+PdnhnU2UhQqAgsx+c4UXJeVBpKbBt+3dWWcAiouQJLiTv0muGjys8UqY3wLcBDSvDPlEWrhhnQiI/8cTGUmvUoFF+sTAh+07/rEyyqC474tb6HF0SmbUWQzQvo96aepFGD0ObE6y0gmJJhc/Tj8vdGPmt8Qq8S2eP31j6wGt4JDLCOsEqGQM/KgknQ8pB03QOAyBUMhYVBTYj68vjeBm0CVH+EoeQLtRiNjXoGhcFnnsQlVwyJjHKIYxLl60Aksvj4ZzzsnnN5KY3mGpA+Q0VIGC7Zs1M3ljgoV+gGYLr6TUndsrt7kJhFoSKhQFBboKF4e2yW/ID/79SGz18aoCI38GjtUYx4WM4m714JZlqBhQUzTl9a/er2aQZBm6sOTxe5QUBsbfuHahjkuU6P+UEgDlgMiI7+WkoTv36uFT25He4B0H+cPDVTAC54jdx+uhGjGL+QQcCg=
+  file:
+  - images/couchdb-data/couchdb-data.tar.gz
+  - images/couchdb-data-preset/couchdb-data-preset.tar.gz
+  overwrite: true
+  on:
+    repo: telephoneorg/docker-kazoo
+    tags: true
