@@ -1,0 +1,35 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: api.valuphone.com
+  labels:
+    app: kazoo
+    project: telephoneorg
+    environment: production
+    provides: api
+    domain: api.valuphone.com
+  annotations:
+    kubernetes.io/tls-acme: 'true'
+    kubernetes.io/ingress.class: 'nginx'
+    # ingress.kubernetes.io/enable-cors: 'true'
+    # ingress.kubernetes.io/cors-allow-headers: DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,X-Auth-Token
+# ingress.kubernetes.io/configuration-snippet: |
+    #   proxy_hide_header access-control-allow-origin;
+spec:
+  tls:
+  - hosts:
+    - api.valuphone.com
+    secretName: api.valuphone.com-tls
+  rules:
+  - host: api.valuphone.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: kazoo
+          servicePort: 8000
+
+      # proxy_hide_header access-control-expose-headers;
+      # proxy_hide_header access-control-allow-methods;
+      # proxy_hide_header access-control-allow-headers;
+      # proxy_hide_header access-control-max-age;

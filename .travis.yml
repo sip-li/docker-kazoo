@@ -31,8 +31,10 @@ script: true
 
 after_success:
 - ci-tag-build
-- inv hub.push
-- inv hub.update-readme
+- hub-push
+- hub-updated-readme
+# - inv hub.push
+# - inv hub.update-readme
 
 deploy:
   provider: releases

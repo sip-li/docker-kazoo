@@ -8,6 +8,12 @@ metadata:
     environment: production
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  minReadySeconds: 5
   template:
     metadata:
       labels:
@@ -87,7 +93,7 @@ spec:
           valueFrom:
             configMapKeyRef:
               name: kazoo
-              key: kazoo.amqp.hosts
+              key: rabbitmq.hosts
         - name: KAZOO_LOG_LEVEL
           valueFrom:
             configMapKeyRef:
@@ -117,16 +123,16 @@ spec:
           containerPort: 24517
         resources:
           requests:
-            cpu: 2
-            memory: 2Gi
+            cpu: 3
+            memory: 3Gi
           limits:
-            cpu: 2
-            memory: 2Gi
+            cpu: 3
+            memory: 3Gi
         readinessProbe:
           httpGet:
             path: /
             port: 8000
-          initialDelaySeconds: 160
+          initialDelaySeconds: 10
           timeoutSeconds: 5
           successThreshold: 1
           failureThreshold: 5
@@ -134,7 +140,7 @@ spec:
           httpGet:
             path: /
             port: 8000
-          initialDelaySeconds: 180
+          initialDelaySeconds: 1200
           timeoutSeconds: 5
           successThreshold: 1
           failureThreshold: 5
