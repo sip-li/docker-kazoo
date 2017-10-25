@@ -28,8 +28,9 @@ echo -e "  branch: 	  $KAZOO_RELEASE_TAG
 "
 
 pushd /opt
-	curl -sL $KAZOO_RELEASE_DOWNLOAD_URL \
-		| tar xz --strip-components=1 -C .
+	curl -sLO $KAZOO_RELEASE_DOWNLOAD_URL
+	tar xzvf kazoo.*.tar.gz --strip-components=1
+	rm -f kazoo.*.tar.gz
 	popd
 
 

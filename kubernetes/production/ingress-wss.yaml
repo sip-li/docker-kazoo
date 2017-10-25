@@ -5,14 +5,8 @@ metadata:
   annotations:
     kubernetes.io/tls-acme: 'true'
     kubernetes.io/ingress.class: 'nginx'
-    ingress.kubernetes.io/enable-cors: 'true'
-    ingress.kubernetes.io/cors-allow-headers: DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,X-Auth-Token
-  labels:
-    app: kazoo
-    project: telephoneorg
-    environment: production
-    provides: secure-websockets
-    domain: wss.valuphone.com
+    ingress.kubernetes.io/proxy-send-timeout: '360s'
+    ingress.kubernetes.io/proxy-read-timeout: '360s'
 spec:
   tls:
   - hosts:
