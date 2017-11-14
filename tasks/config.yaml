@@ -1,0 +1,31 @@
+project: kazoo
+repo: docker-kazoo
+extras:
+- db
+- sup
+hub:
+  images:
+  - couchdb
+  - kzutil
+  - couchdb-data
+tmpl:
+  glob: templates/**/*.j2
+  values:
+  - vars.yaml
+sup:
+  constants:
+    language: en-us
+    media_path: /opt/kazoo/media/prompts/en/us
+    monster_apps_path: /var/www/html/monster-ui/app
+    crossbar_uri: http://localhost:8000/v2
+    master_account:
+      account: test
+      realm: localhost.localdomain
+      user: admin
+      password: secret
+    fs_node: freeswitch@freeswitch.local
+    sbc_host: kamailio.valuphone.local
+db:
+  compose_file: docker-compose-build.yaml
+  sleep_mins: 6
+  export_file: couchdb-data.tar.gz

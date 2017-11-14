@@ -3,17 +3,21 @@ services:
   kazoo:
     container_name: kazoo
     hostname: kazoo.local
-    build: images/kazoo
-    image: telephoneorg/kazoo:${TAG:-latest}
+    build:
+      args:
+        KAZOO_VERSION: 4.1.40
+        KAZOO_CONFIGS_VERSION: 4.1.21
+      context: images/kazoo
+    image: telephoneorg/kazoo:${DOCKER_TAG:-latest}
     environment:
       ERLANG_HOSTNAME: long
       ERLANG_COOKIE: test-cookie
-      RABBITMQ_HOSTS: rabbitmq.local
+      RABBITMQ_HOST: rabbitmq.local
       COUCHDB_HOST: couchdb.local
       COUCHDB_USER: admin
       COUCHDB_PASS: secret
       KAZOO_LOG_LEVEL: info
-      KAZOO_APPS: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,tasks,teletype,trunkstore,webhooks
+      KAZOO_APPS: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,tasks,teletype,trunkstore,webhooks
     ports:
     - "5555:5555"
     - "8000:8000"
@@ -51,13 +55,12 @@ services:
     hostname: couchdb.local
     image: telephoneorg/couchdb:latest
     environment:
-      ERLANG_HOSTNAME: long
       COUCHDB_DEV_INIT: 'true'
+      ERLANG_COOKIE: test-cookie
       COUCHDB_ADMIN_USER: admin
       COUCHDB_ADMIN_PASS: secret
-      ERLANG_COOKIE: test-cookie
-      COUCHDB_SHARDS: 1
-      COUCHDB_LOG_LEVEL: warn
+      COUCHDB_SHARDS: '1'
+      COUCHDB_LOG_LEVEL: info
     ports:
     - "5984:5984"
     - "5986:5986"
@@ -65,8 +68,9 @@ services:
       local:
         aliases:
         - couchdb.local
-    cap_add:
-    - SYS_NICE
-    - SYS_RESOURCE
+  couchdb-data:
+    container_name: couchdb-data
+    image: telephoneorg/couchdb-data:${DOCKER_TAG:-latest}
+    command: sleep 9999
 networks:
   local:

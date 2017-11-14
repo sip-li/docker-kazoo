@@ -8,7 +8,7 @@ metadata:
     environment: testing
 type: Opaque
 data:
-  erlang.cookie: WlgyZVA4Umo4cnVmUjVJbjNnWGV1akhYNllseEREbnRyd3ZROE5kcGd3OXFOQjZ5UFhPUWhxNFF4bEc0WnZaQQ==
+  cookie: WlgyZVA4Umo4cnVmUjVJbjNnWGV1akhYNllseEREbnRyd3ZROE5kcGd3OXFOQjZ5UFhPUWhxNFF4bEc0WnZaQQ==
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -21,14 +21,127 @@ metadata:
 data:
   erlang.hostname: long
   kube.hostname.fix: 'true'
-  datacenter: sl
+  country: us
   region: east
-  erlang.threads: '64'
   couchdb.host: couchdb-lb
-  rabbitmq.hosts: rabbitmq
+  rabbitmq.host: rabbitmq
   kazoo.apps: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,tasks,teletype,trunkstore,webhooks
   kazoo.log.level: info
   kazoo.log.color: 'true'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kazoo-templates
+  labels:
+    app: kazoo
+    project: telephoneorg
+    environment: production
+data:
+  sys.config: |
+    ---
+    target: /config/sys.config
+    ---
+    
+    {%- set config_map = env.get('CONFIG_MAP', 'kazoo') %}
+    {% set config = kube.get('configmap', config_map).data -%}
+    
+    [
+        {lager, [
+            {handlers, [
+                {lager_console_backend, info}
+            ]},
+        {colored, {{ config['kazoo.log.color'] }}},
+        {colors, [
+            {debug,     "\e[0;38m" },
+            {info,      "\e[1;32m" },
+            {notice,    "\e[1;36m" },
+            {warning,   "\e[1;33m" },
+            {error,     "\e[1;31m" },
+            {critical,  "\e[1;35m" },
+            {alert,     "\e[1;44m" },
+            {emergency, "\e[1;41m" }
+        ]},
+        {error_logger_hwm, 500}
+        ]}
+    ].
+  vm.args.j2: |
+    ---
+    target: /config/vm.args
+    ---
+    {% set config_map = env.get('CONFIG_MAP', 'kazoo') %}
+    {% set config = kube.get('configmap', config_map).data -%}
+    
+    -sasl sasl_error_logger false
+    
+    -boot /opt/kazoo/releases/4.0.0/kazoo
+    
+    -mode interactive
+    
+    {% if config.get('erlang.hostname') == 'long' %}
+    -name kazoo
+    {% else %}
+    -sname kazoo
+    {% endif %}
+    
+    -config /config/sys.config
+    
+    -kernel inet_dist_listen_min 11500 inet_dist_listen_max 11999
+    
+    +K true
+    
+    +P {{ config.get('erlang.processes', shell('nproc') * 3200) }}
+    
+    +A {{ config.get('erlang.threads', shell('nproc') * 16) }}
+    
+    +W w
+    
+    +Bd -noinput
+    
+    -s kazoo_apps_app
+  config.ini.j2: |
+    ---
+    target: /config/config.ini
+    ---
+    
+    {%- set config_map = env.get('CONFIG_MAP', 'kazoo') %}
+    {% set config = kube.get('configmap', config_map).data %}
+    {% set rabbitmq = kube.get('secret', 'rabbitmq').data %}
+    {% set erlang = kube.get('secret', 'erlang').data %}
+    {% set couchdb = kube.get('secret', 'couchdb').data %}
+    
+    {% set zone = '{}-{}'.format(
+        config.get('kazoo.country', 'us'), config.get('kazoo.region', 'east')
+        ) %}
+    {% set amqp_uri = 'amqp://{}:{}@{}:5672'.format(
+        rabbitmq.get('user', 'guest'),
+        rabbitmq.get('pass', 'guest'),
+        config.get('rabbitmq.host', 'rabbitmq')
+        ) %}
+    {% set fqdn = shell('hostname -f') -%}
+    
+    [zone]
+    name = {{ zone }}
+    amqp_uri = "{{ amqp_uri }}"
+    
+    [bigcouch]
+    ip = "{{ config.get('couchdb.host', 'couchdb-lb') }}"
+    port = {{ config.get('couchdb.port', '5984') }}
+    admin_port = {{ config.get('couchdb.admin-port', '5986') }}
+    cookie = {{ erlang.get('cookie', 'insecure-cookie') }}
+    compact_automatically = true
+    {% if couchdb.get('user') and couchdb.get('pass') %}
+    username = "{{ couchdb['user'] }}"
+    password = "{{ couchdb['pass'] }}"
+    {% endif %}
+    
+    [kazoo_apps]
+    host = {{ fqdn }}
+    cookie = {{ erlang.get('cookie', 'insecure-cookie') }}
+    zone = {{ zone }}
+    
+    [log]
+    console = {{ config.get('kazoo.log.level', 'info') }}
 ---
 apiVersion: v1
 kind: Service
@@ -94,12 +207,12 @@ spec:
         - name: NAMESPACE
           valueFrom:
             fieldRef:
-              apiVersion: v1
               fieldPath: metadata.namespace
-      containers:
-      - name: kazoo
-        image: telephoneorg/kazoo:latest
+      - name: config
+        image: telephoneorg/tmpld
         imagePullPolicy: IfNotPresent
+        args:
+        - tmpld /templates/**/*.j2
         env:
         - name: ERLANG_HOSTNAME
           valueFrom:
@@ -111,66 +224,31 @@ spec:
             configMapKeyRef:
               name: kazoo
               key: kube.hostname.fix
-        - name: ERLANG_THREADS
+        volumeMounts:
+        - name: templates
+          mountPath: /templates
+        - name: config
+          mountPath: /config
+      containers:
+      - name: kazoo
+        image: telephoneorg/kazoo:latest
+        imagePullPolicy: Always
+        env:
+        - name: ERLANG_HOSTNAME
           valueFrom:
             configMapKeyRef:
               name: kazoo
-              key: erlang.threads
+              key: erlang.hostname
+        - name: KUBE_HOSTNAME_FIX
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo
+              key: kube.hostname.fix
         - name: ERLANG_COOKIE
           valueFrom:
             secretKeyRef:
               name: erlang
-              key: erlang.cookie
-        - name: RABBITMQ_USER
-          valueFrom:
-            secretKeyRef:
-              name: rabbitmq
-              key: rabbitmq.user
-        - name: RABBITMQ_PASS
-          valueFrom:
-            secretKeyRef:
-              name: rabbitmq
-              key: rabbitmq.pass
-        - name: COUCHDB_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: kazoo
-              key: couchdb.host
-        - name: COUCHDB_USER
-          valueFrom:
-            secretKeyRef:
-              name: couchdb
-              key: couchdb.user
-        - name: COUCHDB_PASS
-          valueFrom:
-            secretKeyRef:
-              name: couchdb
-              key: couchdb.pass
-        - name: REGION
-          valueFrom:
-            configMapKeyRef:
-              name: kazoo
-              key: region
-        - name: DATACENTER
-          valueFrom:
-            configMapKeyRef:
-              name: kazoo
-              key: datacenter
-        - name: RABBITMQ_HOSTS
-          valueFrom:
-            configMapKeyRef:
-              name: kazoo
-              key: rabbitmq.hosts
-        - name: KAZOO_LOG_LEVEL
-          valueFrom:
-            configMapKeyRef:
-              name: kazoo
-              key: kazoo.log.level
-        - name: KAZOO_LOG_COLOR
-          valueFrom:
-            configMapKeyRef:
-              name: kazoo
-              key: kazoo.log.color
+              key: cookie
         - name: KAZOO_APPS
           valueFrom:
             configMapKeyRef:
@@ -188,6 +266,16 @@ spec:
           containerPort: 19025
         - name: media-proxy
           containerPort: 24517
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        resources:
+          requests:
+            cpu: 3
+            memory: 3Gi
+          limits:
+            cpu: 3
+            memory: 3Gi
         readinessProbe:
           httpGet:
             path: /
@@ -204,4 +292,10 @@ spec:
           timeoutSeconds: 5
           successThreshold: 1
           failureThreshold: 5
+      volumes:
+      - name: templates
+        configMap:
+          name: kazoo-templates
+      - name: config
+        emptyDir: {}
       restartPolicy: Always

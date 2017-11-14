@@ -2,11 +2,14 @@ FROM telephoneorg/debian:stretch
 
 MAINTAINER Joe Black <me@joeblack.nyc>
 
-ARG     KAZOO_BRANCH
+ARG     KAZOO_VERSION
+ARG     KAZOO_CONFIGS_VERSION
 
-ENV     KAZOO_BRANCH ${KAZOO_BRANCH:-4.2}
+ENV     KAZOO_VERSION ${KAZOO_VERSION:-4.1.40}
+ENV     KAZOO_CONFIGS_VERSION ${KAZOO_CONFIGS_VERSION:-4.1.21}
 
-LABEL   app.kazoo.core.branch=$KAZOO_BRANCH
+LABEL   app.kazoo.core.version=$KAZOO_VERSION
+LABEL   app.kazoo.configs.version=$KAZOO_CONFIGS_VERSION
 
 ENV     APP kazoo
 ENV     USER $APP
@@ -15,30 +18,28 @@ ENV     HOME /opt/$APP
 COPY    build.sh /tmp/
 RUN     /tmp/build.sh
 
-COPY    kazoo.limits.conf /etc/security/limits.d/
 COPY    entrypoint /
 COPY    kazoo-tool /usr/local/bin/
 COPY    sup /usr/local/bin/
 
-ENV     ERL_MAX_PORTS 65536
+VOLUME  ["/var/www/html/monster-ui", "/opt/kazoo/media/prompts"]
+
+ENV     ERL_MAX_PORTS 16192
 ENV     ERLANG_VM kazoo_apps
-ENV     ERLANG_THREADS 64
-ENV     ERLANG_PROCESSES 134217727
 ENV     ERLANG_HOSTNAME long
 
 # options: debug info notice warning error critical alert emergency
 ENV     KAZOO_LOG_LEVEL info
 ENV     KAZOO_LOG_COLOR true
-ENV     KAZOO_APPS blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,tasks,teletype,trunkstore,webhooks
+ENV     KAZOO_APPS blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,tasks,teletype,trunkstore,webhooks
 
 ENV     COUCHDB_HOST couchdb
 ENV     COUCHDB_DATA_PORT 5984
 ENV     COUCHDB_ADMIN_PORT 5986
-ENV     COUCHDB_COMPACT_AUTOMATICALLY true
 ENV     COUCHDB_USER admin
 ENV     COUCHDB_PASS secret
 
-ENV     KAZOO_AMQP_HOSTS rabbitmq
+ENV     RABBITMQ_HOSTS rabbitmq
 ENV     RABBITMQ_USER guest
 ENV     RABBITMQ_PASS guest
 

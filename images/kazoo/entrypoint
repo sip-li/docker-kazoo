@@ -7,43 +7,45 @@ set -e
 
 : readonly ${PUBLIC_FQDN:=$(hostname -f)}
 
+: readonly ${COUNTRY:=us}
 : readonly ${REGION:=local}
-: readonly ${DATACENTER:=dev}
-
-: readonly ${KAZOO_ZONE:=${REGION}-${DATACENTER}}
+: readonly ${KAZOO_ZONE:=${COUNTRY}-${REGION}}
 
 # This is the list of whapps that you want to autostart in this vm.
-: readonly ${KAZOO_APPS:=blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks}
-
-: readonly ${ERLANG_VM:=kazoo_apps}
-# : readonly ${ERLANG_THREADS:=64}
-: declare -ir ${ERLANG_THREADS:=$(( $(nproc) * 8 ))}
-: declare -ir ${ERLANG_PROCESSES:=134217727}
+: readonly ${KAZOO_APPS:=blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks}
 : readonly ${ERLANG_COOKIE:=insecure-cookie}
+
+: declare -ir ${ERLANG_THREADS:=$(( $(nproc) * 16 ))}
+: declare -ir ${ERLANG_PROCESSES:=$(( $(nproc) * 3200 ))}
 
 # options: debug info notice warning error critical alert emergency
 : readonly ${KAZOO_LOG_LEVEL:=info}
 : readonly ${KAZOO_LOG_COLOR:=true}
 
-# options: error progress all
-: readonly ${KAZOO_SASL_ERRLOG_TYPE:=error}
-: readonly ${KAZOO_SASL_ERROR_LOGGER:=tty}
 
 : readonly ${COUCHDB_HOST:=couchdb}
 : readonly ${COUCHDB_DATA_PORT:=5984}
 : readonly ${COUCHDB_ADMIN_PORT:=5986}
-: readonly ${COUCHDB_COMPACT_AUTOMATICALLY:=true}
+# : readonly ${COUCHDB_COMPACT_AUTOMATICALLY:=true}
 : readonly ${COUCHDB_USER:=}
 : readonly ${COUCHDB_PASS:=}
 
-: readonly ${RABBITMQ_HOSTS:=rabbitmq}
+: readonly ${RABBITMQ_HOST:=rabbitmq}
 
 : readonly ${RABBITMQ_USER:=guest}
 : readonly ${RABBITMQ_PASS:=guest}
 
 
-log::m-info "Writing $APP sys.config ..."
-tee /etc/kazoo/core/sys.config <<EOF
+for file in sys.config vm.args config.ini; do
+    if [[ -e /config/$file ]]; then
+        ln -sf /config/$file /etc/kazoo/core/$file
+    fi
+done
+
+
+if [[ ! -e /config/sys.config ]]; then
+    log::m-info "Writing $APP sys.config ..."
+    tee /etc/kazoo/core/sys.config <<EOF
 [
     {lager, [
         {handlers, [
@@ -64,22 +66,23 @@ tee /etc/kazoo/core/sys.config <<EOF
     ]}
 ].
 EOF
+fi
 
 
-log::m-info "Writing $APP vm.args ..."
-tee /etc/kazoo/core/vm.args <<EOF
-# Tell SASL not to log progress reports, and log SASL errors to a file
--sasl errlog_type $KAZOO_SASL_ERRLOG_TYPE
--sasl sasl_error_logger $KAZOO_SASL_ERROR_LOGGER
+if [[ ! -e /config/vm.args ]]; then
+    log::m-info "Writing $APP vm.args ..."
+    tee /etc/kazoo/core/vm.args <<EOF
+# disable sasl error logger
+-sasl sasl_error_logger false
 
 # Boot kazoo $KAZOO_RELEASE release
--boot $HOME/releases/$KAZOO_RELEASE/kazoo
+-boot /opt/kazoo/releases/4.0.0/kazoo
 
 # Loading mode
 -mode interactive
 
 # Use the following erlang long hostname
-$(erlang::vmargs::get-name "$ERLANG_VM")
+-name kazoo_apps
 
 # Use the following sys.config
 -config /etc/kazoo/core/sys.config
@@ -94,38 +97,34 @@ $(erlang::vmargs::get-name "$ERLANG_VM")
 # Start a pool of asynchronous IO threads
 +A $ERLANG_THREADS
 
+# Maximum number of processes
++P $ERLANG_PROCESSES
+
 # Comment this line out if you want the Erlang shell
-+Bd
++Bd -noinput
 
 # Treat error_logger:warning_msg/2 as warnings instead of errors (default)
 +W w
 
-# No input
--noinput
-
-# Enable SMP
--smp enable
-
-# Maximum number of processes
-+P $ERLANG_PROCESSES
-
 # Erlang VM to boot
--s ${ERLANG_VM}_app
+-s kazoo_apps_app
 EOF
+fi
 
 
-log::m-info "Writing $APP config.ini ..."
-cat > /etc/kazoo/core/config.ini <<EOF
+if [[ ! -e /config/config.ini ]]; then
+    log::m-info "Writing $APP config.ini ..."
+    cat > /etc/kazoo/core/config.ini <<EOF
 [zone]
 name = $KAZOO_ZONE
-$(kazoo::build-amqp-uri-list "$RABBITMQ_HOSTS" 'amqp_uri')
+amqp_uri = "amqp://$RABBITMQ_USER:$RABBITMQ_PASS@$RABBITMQ_HOST:5672"
 
 [bigcouch]
 ip = "$COUCHDB_HOST"
 port = $COUCHDB_DATA_PORT
 admin_port = $COUCHDB_ADMIN_PORT
 cookie = $ERLANG_COOKIE
-compact_automatically = $COUCHDB_COMPACT_AUTOMATICALLY
+compact_automatically = true
 ;;;username = "$COUCHDB_USER"
 ;;;password = "$COUCHDB_PASS"
 
@@ -137,13 +136,13 @@ zone = $KAZOO_ZONE
 [log]
 console = $KAZOO_LOG_LEVEL
 EOF
-
 # if COUCHDB_USER + COUCHDB_PASS non-empty unescape the username and password
 # above.
 if [[ ! -z $COUCHDB_USER && ! -z $COUCHDB_PASS ]]; then
     sed -i 's/^\;\;\;//g' /etc/kazoo/core/config.ini
 fi
 cat /etc/kazoo/core/config.ini
+fi
 
 
 log::m-info "Ensuring permissions ..."

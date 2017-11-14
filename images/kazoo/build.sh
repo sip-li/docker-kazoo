@@ -2,6 +2,8 @@
 
 set -e
 
+KAZOO_SHORT_VERSION=${KAZOO_VERSION%.*}
+
 # Use local cache proxy if it can be reached, else nothing.
 eval $(detect-proxy enable)
 
@@ -12,62 +14,19 @@ log::m-info "Installing essentials ..."
 apt-get update -qq
 apt-get install -yqq \
 	ca-certificates \
-	curl \
-	jq
+	curl
 
 
-KAZOO_RELEASE_DATA=$(curl -sSL https://api.github.com/repos/telephoneorg/kazoo-builder/releases/latest)
-KAZOO_RELEASE_TAG=$(jq -r '.tag_name' <(echo $KAZOO_RELEASE_DATA))
-KAZOO_RELEASE_DATE=$(jq -r '.published_at' <(echo $KAZOO_RELEASE_DATA))
-KAZOO_RELEASE_DOWNLOAD_URL=$(jq -r '.assets[].browser_download_url' <(echo $KAZOO_RELEASE_DATA))
-
-log::m-info "Downloading $APP Release ..."
-echo -e "  branch: 	  $KAZOO_RELEASE_TAG
-  published:  $KAZOO_RELEASE_DATE
-  from: 	  $KAZOO_RELEASE_DOWNLOAD_URL
-"
-
-pushd /opt
-	curl -sLO $KAZOO_RELEASE_DOWNLOAD_URL
-	tar xzvf kazoo.*.tar.gz --strip-components=1
-	rm -f kazoo.*.tar.gz
-	popd
-
-
-log::m-info "Removing jq ..."
-apt-get purge -y --auto-remove jq
-
-
-log::m-info "Installing $APP dependencies ..."
-apt-get install -yqq \
-	expat \
-	htmldoc \
-	libexpat1-dev \
-	libssl1.0.2 \
-	libssl-dev \
-	libncurses5-dev \
-	libxslt-dev \
-	openssl \
-    zlib1g-dev \
-	iputils-ping
-
-
-log::m-info "linking kazoo-configs ..."
-mkdir -p /etc/kazoo
-ln -s ~/etc/kazoo/core /etc/kazoo/core
-
-
-log::m-info "linking sup ..."
-ln -s ~/bin/sup /usr/bin/sup
-
-
-log::m-info "linking bash_completion for sup ..."
-ln -s  ~/sup.bash /etc/bash_completion.d/sup.bash
-
-
-log::m-info "linking monster-ui to /var/www/html/monster-ui ..."
-mkdir -p /var/www/html
-ln -s ~/monster-ui $_/monster-ui
+tmpd=$(mktemp -d)
+pushd $tmpd
+	apt-get update -qq
+	log::m-info "Kazoo & Kazoo Configs"
+	log::m-info "  Downloading ..."
+	curl -sLO https://github.com/telephoneorg/kazoo-builder/releases/download/v$KAZOO_VERSION/kazoo_${KAZOO_VERSION}.deb
+	curl -sLO https://github.com/telephoneorg/kazoo-builder/releases/download/v$KAZOO_VERSION/kazoo-configs_${KAZOO_CONFIGS_VERSION}.deb
+	log::m-info "  Installing ..."
+	apt install -y ./*.deb
+	popd && rm -rf $tmpd && unset tmpd
 
 
 log::m-info "Adding app init to entrypoint.d ..."
@@ -94,6 +53,7 @@ EOF
 log::m-info "Adding erts directory to paths.d ..."
 tee /etc/paths.d/20-${APP} <<EOF
 ~/erts-$(cat ~/releases/RELEASES | head -1 | cut -d',' -f4 | xargs)/bin
+~/bin
 EOF
 
 
@@ -107,21 +67,14 @@ ERTS_LIB_DIR=$HOME/lib
 EOF
 
 
-
-
-
 log::m-info "Adding /etc/kazoo to fixattrs.d ..."
 tee /etc/fixattrs.d/20-${APP}-perms <<EOF
-/opt/kazoo/etc true $USER:$USER 0644 0755
+/etc/kazoo true $USER:$USER 0644 0755
+/var/run/kazoo true $USER:$USER 0755 0755
+/var/www/html/monster-ui true $USER:$USER 0777 0777
+/opt/kazoo/media/prompts true $USER:$USER 0777 0777
+/config true $USER:$USER 0755 0755
 EOF
-
-
-log::m-info "Creating Directories ..."
-mkdir -p /var/run/kazoo
-
-
-log::m-info "Setting Ownership & Permissions ..."
-chown -R $USER:$USER ~ /var/run/kazoo
 
 
 log::m-info "Cleaning up ..."

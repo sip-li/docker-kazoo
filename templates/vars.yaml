@@ -1,0 +1,13 @@
+name: kazoo
+project: telephoneorg
+environment: production
+images:
+  kazoo: telephoneorg/kazoo:latest
+  tmpld: telephoneorg/tmpld
+  goss: telephoneorg/goss
+  kubewait: telephoneorg/kubewait
+replicas: 1
+domain: valuphone.com
+websockets:
+  proxy-send-timeout: 360s
+  proxy-read-timeout: 360s

@@ -2,23 +2,25 @@ import time
 
 from invoke import task
 
-# from . import sup
-
 
 @task(default=True)
 def archive(ctx):
-    ctx.run('docker-compose -f docker-compose-couchdb-data.yaml up -d')
-    time.sleep(16 * 60)
+    # ctx.run('docker-compose -f {} up -d'.format(ctx.db['compose_file']))
+    # time.sleep(ctx.db['sleep_mins'] * 60)
     ctx.run(
-        'docker exec -ti kazoo sup kapps_maintenance refresh system_schemas')
-    time.sleep(60)
+        'docker exec -ti kazoo sup kapps_maintenance refresh system_schemas',
+        pty=True)
+    time.sleep(30)
     ctx.run(
-        'docker exec -ti couchdb tar -czvf couchdb-data.tar.gz '
-        '-C /volumes/couchdb data',
+        'docker exec -ti couchdb tar -czvf {} '
+        '-C /volumes/couchdb data'.format(ctx.db['export_file']),
         pty=True
     )
     ctx.run(
-        'docker cp couchdb:/opt/couchdb/couchdb-data.tar.gz '
-        'images/couchdb-data/',
+        'docker cp couchdb:/opt/couchdb/{} '
+        'images/couchdb-data'.format(ctx.db['export_file']),
         pty=True
     )
+    ctx.run(
+        'docker-compose -f {} -v down'.format(ctx.db['export_file']), pty=True)
+    ctx.run('docker-compose build couchdb-data', pty=True)

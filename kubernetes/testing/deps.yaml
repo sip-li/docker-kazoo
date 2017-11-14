@@ -12,8 +12,8 @@ metadata:
     environment: testing
 type: Opaque
 data:
-  rabbitmq.pass: RVZCNklCQVhWMTlUWEtlQWZ4dWRUQkk0RVk3dzljaWk=
-  rabbitmq.user: Y29sbGFib3JhdGU=
+  pass: RVZCNklCQVhWMTlUWEtlQWZ4dWRUQkk0RVk3dzljaWk=
+  user: Y29sbGFib3JhdGU=
 ---
 apiVersion: v1
 kind: Secret
@@ -25,7 +25,7 @@ metadata:
     environment: testing
 type: Opaque
 data:
-  erlang.cookie: WlgyZVA4Umo4cnVmUjVJbjNnWGV1akhYNllseEREbnRyd3ZROE5kcGd3OXFOQjZ5UFhPUWhxNFF4bEc0WnZaQQ==
+  cookie: WlgyZVA4Umo4cnVmUjVJbjNnWGV1akhYNllseEREbnRyd3ZROE5kcGd3OXFOQjZ5UFhPUWhxNFF4bEc0WnZaQQ==
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -67,6 +67,12 @@ metadata:
     environment: testing
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  minReadySeconds: 5
   template:
     metadata:
       labels:
@@ -98,17 +104,17 @@ spec:
           valueFrom:
             secretKeyRef:
               name: rabbitmq
-              key: rabbitmq.user
+              key: user
         - name: RABBITMQ_DEFAULT_PASS
           valueFrom:
             secretKeyRef:
               name: rabbitmq
-              key: rabbitmq.pass
+              key: pass
         - name: ERLANG_COOKIE
           valueFrom:
             secretKeyRef:
               name: erlang
-              key: erlang.cookie
+              key: cookie
         ports:
         - name: amqp
           containerPort: 5672
@@ -147,8 +153,8 @@ metadata:
     environment: testing
 type: Opaque
 data:
-  couchdb.user: Y29sbGFib3JhdGU=
-  couchdb.pass: RVZCNklCQVhWMTlUWEtlQWZ4dWRUQkk0RVk3dzljaWk=
+  user: Y29sbGFib3JhdGU=
+  pass: RVZCNklCQVhWMTlUWEtlQWZ4dWRUQkk0RVk3dzljaWk=
 ---
 apiVersion: v1
 kind: Secret
@@ -160,7 +166,24 @@ metadata:
     environment: testing
 type: Opaque
 data:
-  erlang.cookie: WlgyZVA4Umo4cnVmUjVJbjNnWGV1akhYNllseEREbnRyd3ZROE5kcGd3OXFOQjZ5UFhPUWhxNFF4bEc0WnZaQQ==
+  cookie: WlgyZVA4Umo4cnVmUjVJbjNnWGV1akhYNllseEREbnRyd3ZROE5kcGd3OXFOQjZ5UFhPUWhxNFF4bEc0WnZaQQ==
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: couchdb
+  labels:
+    app: couchdb
+    test: 'true'
+    environment: testing
+data:
+  erlang.hostname: long
+  couchdb.log.level: warn
+  couchdb.shards: '4'
+  couchdb.replicas: '3'
+  couchdb.read-quorum: '1'
+  couchdb.write-quorum: '2'
+  couchdiscover.log.level: info
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -177,83 +200,59 @@ data:
     ---
     {% set config_map = env.get('CONFIG_MAP', 'couchdb') %}
     {% set config = kube.get('configmap', config_map).data -%}
-
+    
     [couchdb]
     database_dir = {{ config.get('couchdb.data-dir', '/volumes/couchdb/data') }}
-    view_index_dir = {{ config.get('couchdb.data-dir', '/volumes/couchdb/data') }}
-
+    view_index_dir = {{ config.get('couchdb.data-dir', '/volumes/couchdb/data/index') }}
+    
     [chttpd]
-    require_valid_user = {{ config.get('couchdb.require-valid-user', 'true') }}
+    require_valid_user = false
     port = {{ config.get('couchdb.port', '5984') }}
     bind_address = 0.0.0.0
-
+    
     [httpd]
-    require_valid_user = {{ config.get('couchdb.require-valid-user', 'true') }}
+    require_valid_user = false
     port = {{ config.get('couchdb.port', '5986') }}
     bind_address = 0.0.0.0
-
+    
     [cluster]
     q = {{ config.get('couchdb.shards', '3') }}
-    n = {{ config.get('couchdb.replicas', '1') }}
+    n = {{ config.get('couchdb.replicas', '2') }}
     r = {{ config.get('couchdb.read-quorum', '1') }}
     w = {{ config.get('couchdb.write-quorum', '1') }}
-
+    
     [couch_httpd_auth]
     iterations = 1000
-
+    
     [log]
     level = {{ config.get('couchdb.log.level', 'info').lower() }}
+
   vm.args.j2: |
     ---
     target: /config/vm.args
     ---
     {% set config_map = env.get('CONFIG_MAP', 'couchdb') %}
     {% set config = kube.get('configmap', config_map).data -%}
-
-    # Turn off the sasl error logger
+    
     -sasl sasl_error_logger false
-
-    # Use the following erlang hostname
+    
     {% if config.get('erlang.hostname') == 'long' %}
     -name couchdb
     {% else %}
     -sname couchdb
     {% endif %}
-
-    # Use kernel poll functionality if supported by emulator
+    
     +K true
-
-    # Start a pool of asynchronous IO threads
-    +A {{ config.get('erlang.threads', '25') }}
-
-    # Turn off the kernel error_logger
+    
+    +P {{ env.get('ERLANG_PROCESSES', 2048) }}
+    
+    +A {{ env.get('ERLANG_THREADS', 32) }}
+    
     -kernel error_logger silent
-
-    # Set erlang distribution to use 11500-11999 ports instead of random
-    # predictibility has value here
+    
     -kernel inet_dist_listen_min 11500 inet_dist_listen_max 11999
-
-    # Comment this line out if you want the Erlang shell
+    
     +Bd -noinput
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: couchdb
-  labels:
-    app: couchdb
-    test: 'true'
-    environment: testing
-data:
-  erlang.hostname: long
-  erlang.threads: '25'
-  couchdb.log.level: info
-  couchdb.require-valid-user: 'false'
-  couchdb.shards: '4'
-  couchdb.replicas: '3'
-  couchdb.read-quorum: '1'
-  couchdb.write-quorum: '2'
-  couchdiscover.log.level: info
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -326,7 +325,13 @@ metadata:
     environment: testing
 spec:
   serviceName: couchdb
-  replicas: 2
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  minReadySeconds: 5
   template:
     metadata:
       labels:
@@ -338,6 +343,7 @@ spec:
       initContainers:
       - name: config
         image: telephoneorg/tmpld
+        imagePullPolicy: IfNotPresent
         args:
         - tmpld /templates/*.j2
         volumeMounts:
@@ -347,7 +353,8 @@ spec:
           mountPath: /config
       containers:
       - name: couchdb
-        image: telephoneorg/couchdb:latest
+        image: telephoneorg/couchdb:v2.1.1
+        imagePullPolicy: IfNotPresent
         env:
         - name: ERLANG_HOSTNAME
           valueFrom:
@@ -358,17 +365,17 @@ spec:
           valueFrom:
             secretKeyRef:
               name: couchdb
-              key: couchdb.user
+              key: user
         - name: COUCHDB_ADMIN_PASS
           valueFrom:
             secretKeyRef:
               name: couchdb
-              key: couchdb.pass
+              key: pass
         - name: ERLANG_COOKIE
           valueFrom:
             secretKeyRef:
               name: erlang
-              key: erlang.cookie
+              key: cookie
         ports:
         - name: data
           containerPort: 5984
@@ -432,359 +439,4 @@ spec:
         configMap:
           name: couchdb-healthz
       restartPolicy: Always
-
-#
-# FREESWITCH
-#
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: erlang
-  labels:
-    app: freeswitch
-    test: 'true'
-    environment: testing
-type: Opaque
-data:
-  erlang.cookie: WlgyZVA4Umo4cnVmUjVJbjNnWGV1akhYNllseEREbnRyd3ZROE5kcGd3OXFOQjZ5UFhPUWhxNFF4bEc0WnZaQQ==
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: freeswitch
-  labels:
-    app: freeswitch
-    test: 'true'
-    environment: testing
-data:
-  freeswitch.log.level: info
-  freeswitch.log.color: 'true'
-  freeswitch.rtp.port-range: '16384-32768'
-  freeswitch.disable-nat-detection: 'false'
-  freeswitch.tls.enable: 'false'
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: freeswitch
-  labels:
-    app: freeswitch
-    test: 'true'
-    environment: testing
-spec:
-  clusterIP: None
-  selector:
-    app: freeswitch
-  ports:
-  - name: mod-kazoo
-    port: 8031
-  - name: sip
-    port: 11000
----
-apiVersion: extensions/v1beta1
-kind: Deployment
-metadata:
-  name: freeswitch
-  labels:
-    app: freeswitch
-    test: 'true'
-    environment: testing
-spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: freeswitch
-        test: 'true'
-        environment: testing
-    spec:
-      hostNetwork: true
-      containers:
-      - name: freeswitch
-        image: telephoneorg/freeswitch
-        imagePullPolicy: IfNotPresent
-        securityContext:
-          capabilities:
-            add:
-            - IPC_LOCK
-            - NET_ADMIN
-            - NET_RAW
-            - NET_BROADCAST
-            - SYS_NICE
-            - SYS_RESOURCE
-        env:
-        - name: ERLANG_COOKIE
-          valueFrom:
-            secretKeyRef:
-              name: erlang
-              key: erlang.cookie
-        - name: FREESWITCH_LOG_LEVEL
-          valueFrom:
-            configMapKeyRef:
-              name: freeswitch
-              key: freeswitch.log.level
-        - name: FREESWITCH_LOG_COLOR
-          valueFrom:
-            configMapKeyRef:
-              name: freeswitch
-              key: freeswitch.log.color
-        - name: FREESWITCH_RTP_PORT_RANGE
-          valueFrom:
-            configMapKeyRef:
-              name: freeswitch
-              key: freeswitch.rtp.port-range
-        - name: FREESWITCH_DISABLE_NAT_DETECTION
-          valueFrom:
-            configMapKeyRef:
-              name: freeswitch
-              key: freeswitch.disable-nat-detection
-        - name: FREESWITCH_TLS_ENABLE
-          valueFrom:
-            configMapKeyRef:
-              name: freeswitch
-              key: freeswitch.tls.enable
-        ports:
-        - name: mod-kazoo
-          containerPort:  8031
-        - name: sip
-          protocol: UDP
-          containerPort: 11000
-        readinessProbe:
-          exec:
-            command: ["fs_cli", "-x", "status", "|", "grep", "-q", "^UP"]
-          initialDelaySeconds: 10
-          timeoutSeconds: 5
-          successThreshold: 1
-          failureThreshold: 5
-        livenessProbe:
-          exec:
-            command: ["fs_cli", "-x", "status", "|", "grep", "-q", "^UP"]
-          initialDelaySeconds: 15
-          timeoutSeconds: 5
-          successThreshold: 1
-          failureThreshold: 5
-        volumeMounts:
-        - name: freeswitch-ramfs
-          mountPath: /volumes/freeswitch
-      volumes:
-      - name: freeswitch-ramfs
-        emptyDir:
-          medium: Memory
-      restartPolicy: Always
-      dnsPolicy: ClusterFirstWithHostNet
-
-#
-# KAMAILIO
-#
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: kamailio
-  labels:
-    app: kamailio
-    test: 'true'
-    environment: testing
-data:
-  kamailio.log.level: info
-  kamailio.log.color: 'true'
-  rabbitmq.hosts: rabbitmq
-  kamailio.shm-memory: '128'
-  kamailio.pkg-memory: '8'
-  kamailio.enable-roles: websockets,message,presence_query,presence_notify_sync,registrar_sync
-  freeswitch.sync.source: kubernetes
-  freeswitch.sync.args: freeswitch
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: kamailio
-  labels:
-    app: kamailio
-    test: 'true'
-    environment: testing
-spec:
-  clusterIP: None
-  selector:
-    app: kamailio
-    test: 'true'
-    environment: testing
-  ports:
-  - name: sip-tcp
-    port: 5060
-  - name: sip-udp
-    protocol: UDP
-    port: 5060
-  - name: sip-tls
-    port: 5061
-  - name: ws-tcp
-    port: 5064
-  - name: ws-udp
-    protocol: UDP
-    port: 5064
-  - name: wss-tcp
-    port: 5065
-  - name: wss-udp
-    protocol: UDP
-    port: 5065
-  - name: alg-tcp
-    port: 7000
-  - name: alg-udp
-    protocol: UDP
-    port: 7000
-  - name: alg-tls
-    port: 7001
----
-apiVersion: extensions/v1beta1
-kind: Deployment
-metadata:
-  name: kamailio
-  labels:
-    app: kamailio
-    test: 'true'
-    environment: testing
-spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: kamailio
-        test: 'true'
-        environment: testing
-    spec:
-      hostNetwork: true
-      initContainers:
-      - name: kubewait
-        image: telephoneorg/kubewait
-        imagePullPolicy: IfNotPresent
-        args:
-        - rabbitmq
-        - freeswitch
-        env:
-        - name: NAMESPACE
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.namespace
-      containers:
-      - name: kamailio
-        image: telephoneorg/kamailio:latest
-        imagePullPolicy: IfNotPresent
-        securityContext:
-          capabilities:
-            add:
-            - IPC_LOCK
-            - NET_ADMIN
-            - NET_RAW
-            - NET_BROADCAST
-            - SYS_NICE
-            - SYS_RESOURCE
-        env:
-        - name: RABBITMQ_HOSTS
-          valueFrom:
-            configMapKeyRef:
-              name: kamailio
-              key: rabbitmq.hosts
-        - name: RABBITMQ_USER
-          valueFrom:
-            secretKeyRef:
-              name: rabbitmq
-              key: rabbitmq.user
-        - name: RABBITMQ_PASS
-          valueFrom:
-            secretKeyRef:
-              name: rabbitmq
-              key: rabbitmq.pass
-        - name: KAMAILIO_LOG_LEVEL
-          valueFrom:
-            configMapKeyRef:
-              name: kamailio
-              key: kamailio.log.level
-        - name: KAMAILIO_LOG_COLOR
-          valueFrom:
-            configMapKeyRef:
-              name: kamailio
-              key: kamailio.log.color
-        - name: KAMAILIO_ENABLE_ROLES
-          valueFrom:
-            configMapKeyRef:
-              name: kamailio
-              key: kamailio.enable-roles
-        - name: FREESWITCH_SYNC_SOURCE
-          valueFrom:
-            configMapKeyRef:
-              name: kamailio
-              key: freeswitch.sync.source
-        - name: FREESWITCH_SYNC_ARGS
-          valueFrom:
-            configMapKeyRef:
-              name: kamailio
-              key: freeswitch.sync.args
-        - name: KAMAILIO_SHM_MEMORY
-          valueFrom:
-            configMapKeyRef:
-              name: kamailio
-              key: kamailio.shm-memory
-        - name: KAMAILIO_PKG_MEMORY
-          valueFrom:
-            configMapKeyRef:
-              name: kamailio
-              key: kamailio.pkg-memory
-        ports:
-        - name: sip-tcp
-          containerPort: 5060
-        - name: sip-udp
-          protocol: UDP
-          containerPort: 5060
-        - name: sip-tls
-          containerPort: 5061
-        - name: ws-tcp
-          containerPort: 5064
-        - name: ws-udp
-          protocol: UDP
-          containerPort: 5064
-        - name: wss-tcp
-          containerPort: 5065
-        - name: wss-udp
-          protocol: UDP
-          containerPort: 5065
-        - name: alg-tcp
-          containerPort: 7000
-        - name: alg-udp
-          protocol: UDP
-          containerPort: 7000
-        - name: alg-tls
-          containerPort: 7001
-        readinessProbe:
-          exec:
-            command:
-            - goss
-            - -g
-            - /goss/goss.yaml
-            - validate
-          initialDelaySeconds: 10
-          timeoutSeconds: 3
-          successThreshold: 1
-          failureThreshold: 5
-        livenessProbe:
-          exec:
-            command:
-            - goss
-            - -g
-            - /goss/goss.yaml
-            - validate
-          initialDelaySeconds: 10
-          timeoutSeconds: 3
-          successThreshold: 1
-          failureThreshold: 5
-        volumeMounts:
-        - name: db
-          mountPath: /volumes/kamailio/db
-      volumes:
-      - name: db
-        emptyDir:
-          medium: Memory
-      restartPolicy: Always
-      dnsPolicy: ClusterFirstWithHostNet
 

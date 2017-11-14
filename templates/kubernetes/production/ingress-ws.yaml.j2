@@ -1,0 +1,29 @@
+---
+target: kubernetes/production/ingress-ws.yaml
+---
+
+{%- set vars = data['vars'] -%}
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ws.{{ vars['domain'] }}
+  labels:
+    app: kazoo
+    project: {{ vars['project'] }}
+    environment: {{ vars['environment'] }}
+    provides: ui-websockets
+    domain: ws.{{ vars['domain'] }}
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    ingress.kubernetes.io/proxy-send-timeout: {{ vars['websockets']['proxy-send-timeout'] }}
+    ingress.kubernetes.io/proxy-read-timeout: {{ vars['websockets']['proxy-read-timeout'] }}
+spec:
+  rules:
+  - host: ws.{{ vars['domain'] }}
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: kazoo
+          servicePort: 5555

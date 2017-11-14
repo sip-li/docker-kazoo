@@ -1,13 +1,19 @@
+---
+target: kubernetes/production/deployment.yaml
+---
+
+{%- set vars = data['vars'] -%}
+
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: kazoo
   labels:
     app: kazoo
-    project: telephoneorg
-    environment: production
+    project: {{ vars['project'] }}
+    environment: {{ vars['environment'] }}
 spec:
-  replicas: 1
+  replicas: {{ vars['replicas'] }}
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -18,12 +24,12 @@ spec:
     metadata:
       labels:
         app: kazoo
-        project: telephoneorg
-        environment: production
+        project: {{ vars['project'] }}
+        environment: {{ vars['environment'] }}
     spec:
       initContainers:
       - name: kubewait
-        image: telephoneorg/kubewait
+        image: {{ vars['images']['kubewait'] }}
         imagePullPolicy: IfNotPresent
         args:
         - rabbitmq
@@ -34,7 +40,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
       - name: config
-        image: telephoneorg/tmpld
+        image: {{ vars['images']['tmpld'] }}
         imagePullPolicy: IfNotPresent
         args:
         - tmpld /templates/**/*.j2
@@ -56,7 +62,7 @@ spec:
           mountPath: /config
       containers:
       - name: kazoo
-        image: telephoneorg/kazoo:latest
+        image: {{ vars['images']['kazoo'] }}
         imagePullPolicy: Always
         env:
         - name: ERLANG_HOSTNAME
@@ -123,4 +129,7 @@ spec:
           name: kazoo-templates
       - name: config
         emptyDir: {}
+      {# - name: healthz
+        configMap:
+          name: kazoo-healthz #}
       restartPolicy: Always

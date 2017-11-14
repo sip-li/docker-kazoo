@@ -11,9 +11,9 @@ def push(ctx):
 
     if os.getenv('TRAVIS'):
         login(ctx)
-    for image in ctx.hub.images:
+    for name in ctx.hub.images:
         ctx.run('docker push {}'.format(
-            '{}/{}:latest'.format(org, image)
+            '{}/{}'.format(ctx.docker['org'], name, ctx.docker['tag'])
         ))
 
 @task

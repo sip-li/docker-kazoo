@@ -1,11 +1,86 @@
+---
+target: kubernetes/testing/local.yaml
+---
+
+{%- set vars = data['vars'] -%}
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: erlang
+  labels:
+    app: kazoo
+    test: 'true'
+    environment: testing
+type: Opaque
+data:
+  cookie: WlgyZVA4Umo4cnVmUjVJbjNnWGV1akhYNllseEREbnRyd3ZROE5kcGd3OXFOQjZ5UFhPUWhxNFF4bEc0WnZaQQ==
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kazoo
+  labels:
+    app: kazoo
+    test: 'true'
+    environment: testing
+data:
+  {{ file('../../includes/config-data.yaml.inc')|indent(2) }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kazoo-templates
+  labels:
+    app: kazoo
+    project: {{ vars['project'] }}
+    environment: {{ vars['environment'] }}
+data:
+  sys.config: |
+    {{ file('../../includes/sys.config.inc')|indent(4) }}
+  vm.args.j2: |
+    {{ file('../../includes/vm.args.inc')|indent(4) }}
+  config.ini.j2: |
+    {{ file('../../includes/config.ini.inc')|indent(4) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kazoo
+  labels:
+    app: kazoo
+    test: 'true'
+    environment: testing
+spec:
+  type: NodePort
+  selector:
+    app: kazoo
+  ports:
+  - name: crossbar
+    port: 8000
+    nodePort: 30800
+  - name: ws-tcp
+    port: 5555
+    nodePort: 30055
+  - name: ws-udp
+    protocol: UDP
+    port: 5555
+    nodePort: 30055
+  - name: fax-smtp
+    port: 19025
+    nodePort: 30025
+  - name: media-proxy
+    port: 24517
+    nodePort: 30017
+---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: kazoo
   labels:
     app: kazoo
-    project: telephoneorg
-    environment: production
+    test: 'true'
+    environment: testing
 spec:
   replicas: 1
   strategy:
@@ -18,12 +93,12 @@ spec:
     metadata:
       labels:
         app: kazoo
-        project: telephoneorg
-        environment: production
+        test: 'true'
+        environment: testing
     spec:
       initContainers:
       - name: kubewait
-        image: telephoneorg/kubewait
+        image: {{ vars['images']['kubewait'] }}
         imagePullPolicy: IfNotPresent
         args:
         - rabbitmq
@@ -34,7 +109,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
       - name: config
-        image: telephoneorg/tmpld
+        image: {{ vars['images']['tmpld'] }}
         imagePullPolicy: IfNotPresent
         args:
         - tmpld /templates/**/*.j2
@@ -56,7 +131,7 @@ spec:
           mountPath: /config
       containers:
       - name: kazoo
-        image: telephoneorg/kazoo:latest
+        image: {{ vars['images']['kazoo'] }}
         imagePullPolicy: Always
         env:
         - name: ERLANG_HOSTNAME
@@ -123,4 +198,7 @@ spec:
           name: kazoo-templates
       - name: config
         emptyDir: {}
+      {# - name: healthz
+        configMap:
+          name: kazoo-healthz #}
       restartPolicy: Always

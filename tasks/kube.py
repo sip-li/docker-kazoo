@@ -13,8 +13,3 @@ def delete(ctx, environment=None):
     ctx.run('kubectl delete -f kubernetes/%s' % (
         environment or ctx.kube.environment
     ))
-
-
-@task
-def template(ctx):
-    ctx.run('tmpld templates/*.j2')

@@ -11,7 +11,7 @@ function remote_console {
     if ping > /dev/null; then
         local rem_name="remsh$(date +%s)-$ERLANG_VM"
         local ntt=$(nodetool -name $ERLANG_VM -setcookie $ERLANG_COOKIE rpcterms net_kernel get_net_ticktime)
-        exec $ERTS_DIR/bin/erl -name $rem_name -remsh $ERLANG_VM -boot ~/bin/start_clean -setcookie $ERLANG_COOKIE -hidden -kernel net_ticktime $ntt
+        exec erl -name $rem_name -remsh $ERLANG_VM -boot ~/bin/start_clean -setcookie $ERLANG_COOKIE -hidden -kernel net_ticktime $ntt
     fi
 }
 
@@ -20,7 +20,7 @@ function upgrade {
     local package="${file%%.tar.gz}"
     [[ ! -f $file ]] && log::m-warn "No file @ $file" && return 1
     log::m-info "initiating upgrade using package: $package"
-    ping && exec escript ~/bin/install_upgrade.escript install kazoo -name $ERLANG_VM $ERLANG_COOKIE "$package"
+    ping && exec install_upgrade.escript install kazoo -name $ERLANG_VM $ERLANG_COOKIE "$package"
 }
 
 function escript {

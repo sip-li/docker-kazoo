@@ -1,7 +1,11 @@
 import unittest
 import configparser
+import sys
 
 import testdocker
+
+sys.modules['testdocker.mixins'].objects.Compose.DEFAULT_FILES = ()
+
 from testdocker import (
     ContainerTestMixinBase,
     ContainerTestMixin,
@@ -17,7 +21,7 @@ class TestKazooBasic(ContainerTestMixin, unittest.TestCase):
     """Run basic tests on kazoo container."""
 
     name = 'kazoo'
-    tear_down = False
+    tear_down = True
     test_patterns = [
         r"successfully connected to 'amqp://guest:guest@rabbitmq\.local",
         r'connected successfully to http://couchdb\.local:5984',
@@ -29,6 +33,7 @@ class TestKazooBasic(ContainerTestMixin, unittest.TestCase):
     ]
     test_tcp_ports = [5555, 8000, 24517]
     test_http_uris = ['http://localhost:8000']
+    # compose_files = ['docker-compose-test.yaml']
 
     def test_correct_name_in_vm_args(self):
         """Assert correct erlang node name in /etc/kazoo/core/vm.args"""
@@ -41,7 +46,7 @@ class TestKazooBasic(ContainerTestMixin, unittest.TestCase):
         """Assert correct amqp_uri's in /etc/kazoo/core/config.ini"""
         cmd = 'cat /etc/kazoo/core/config.ini'
         output = self.container.exec(cmd, output_only=True)
-        amqp_hosts = self.container.env['RABBITMQ_HOSTS'].split(',')
+        amqp_hosts = self.container.env['RABBITMQ_HOST'].split(',')
         patterns = [r'amqp://guest:guest@%s:5672' % h
                     for h in amqp_hosts]
         for pattern in patterns:
@@ -84,8 +89,8 @@ class TestKazooBasic(ContainerTestMixin, unittest.TestCase):
         parser = configparser.ConfigParser(strict=False)
         parser.read_string(output)
         self.assertEqual(parser.get('zone', 'name'),
-                         '%s-%s' % (self.container.env['REGION'],
-                                    self.container.env['DATACENTER'])
+                         '%s-%s' % (self.container.env['COUNTRY'],
+                                    self.container.env['REGION'])
         )
 
     def test_correct_zone_in_kazoo_apps_section_of_config_ini(self):
@@ -95,8 +100,8 @@ class TestKazooBasic(ContainerTestMixin, unittest.TestCase):
         parser = configparser.ConfigParser(strict=False)
         parser.read_string(output)
         self.assertEqual(parser.get('kazoo_apps', 'zone'),
-                         '%s-%s' % (self.container.env['REGION'],
-                                    self.container.env['DATACENTER'])
+                         '%s-%s' % (self.container.env['COUNTRY'],
+                                    self.container.env['REGION'])
         )
 
     def test_correct_cookie_in_kazoo_apps_section_of_config_ini(self):

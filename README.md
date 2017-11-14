@@ -35,54 +35,27 @@ The following variables are standard in most of our Dockerfiles to reduce duplic
 
 ## Run Environment
 Run environment variables are used in the entrypoint script to render configuration templates, perform flow control, etc.  These values can be overridden when inheriting from the base dockerfile, specified during `docker run`, or in kubernetes manifests in the `env` array.
-
-* `KAZOO_APPS`: a comma delimited list used directly by the kazoo_apps erlang vm as the list of default apps to start. Defaults to `blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks`.
-
-* `ERLANG_VM`: `_app` is appended to the end and passed to the `-s` argument in vm.args as well as used for the erlang node name. Defaults to `kazoo_apps`.
-
-* `ERLANG_THREADS`: passed to the `+A` argument in vm.args.  Defaults to `64`.
-
-* `ERLANG_COOKIE`:  written to `~/.erlang.cookie` by the `erlang-cookie` script in `/usr/local/bin`. Defaults to `insecure-cookie`.
-
-* `KAZOO_LOG_LEVEL`: lowercased and used as the value for the console log level in the log section of `config.ini`  Defaults to `info`
-
-* `KAZOO_LOG_COLOR`: used as the value for the `colored` tuple in `sys.config`.  Defaults to `true`
-
-* `KAZOO_SASL_ERRLOG_TYPE`: used as the value for `-sasl errlog_type` in `vm.args`. Defaults to `error`, choices include: error, progress, all.
-
-* `KAZOO_SASL_ERROR_LOGGER`: used as the value for `-sasl sasl_error_logger` in `vm.args`.  Defaults to `tty`.  *This shouldn't be changed without good reason inside docker and is provided for testing purposes*
-
-* `REGION`: interpolated with `DATACENTER` as such `${REGION}-${DATACENTER}` and stored in `KAZOO_ZONE`.  See `KAZOO_ZONE`.  Defaults to local.
-
-* `DATACENTER`: interpolated with `REGION` as such `${REGION}-${DATACENTER}` and stored in `KAZOO_ZONE`.  See `KAZOO_ZONE`.  Defaults to dev.
-
-* `KAZOO_ZONE`: when provided, interpolation of `DATACENTER` and `REGION` is ignored and the value of `KAZOO_ZONE` is used directly. This is useful for local test and dev environments where ZONE's don't matter.  Used as name in `[zone]` section and as `zone` attribute in other sections of `config.ini`.  Defaults to the interpolation described.
-
-* `COUCHDB_HOST`: the hostname or ip address of the load balancer to reach bigcouch or couchdb through. Used in the `bigcouch` section of `config.ini`.  Defaults to `couchdb-lb`.
-
-* `COUCHDB_DATA_PORT`: used as the value for the `port` key in the `bigcouch` section of `config.ini`.  Defaults to `5984`.
-
-* `COUCHDB_ADMIN_PORT`: used as the value for the `admin_port` key in the `bigcouch` section of `config.ini`.  Defaults to `5986`.
-
-* `COUCHDB_COMPACT_AUTOMATICALLY`: used as the value for the `compact_automatically` key in the `bigcouch` section of `config.ini`.  Defaults to `true`.
-
-* `COUCHDB_USER`: used as the value for the `username` key in the `bigcouch` section of `config.ini`.  Defaults to `admin`.
-
-* `COUCHDB_PASS`: used as the value for the `password` key in the `bigcouch` section of `config.ini`.  Defaults to `secret`
-
-* `RABBITMQ_USER`: interpolated as such `"amqp://user:pass@host:5672"` and used for all `uri` keys in the `amqp` section or the `amqp_uri` keys in the `zone` section of `config.ini`.  Defaults to `guest`.
-
-* `RABBITMQ_PASS`: interpolated as such `"amqp://user:pass@host:5672"` and used for all `uri` keys in the `amqp` section or the `amqp_uri` keys in the `zone` section of `config.ini`.  Defaults to `guest`.
-
-* `RABBITMQ_HOSTS`: comma delimited list of hostnames or ip addresses that are split on comma's, interpolated as such `"amqp://{user}:{pass}@{host}:5672"`, and used to build a list of `amqp_uri`'s' for the `zone` section of `config.ini`.  Defaults to `rabbitmq`.
+* `KAZOO_APPS`: a comma delimited list used directly by the kazoo_apps erlang vm as the list of default apps to start.
+* `ERLANG_THREADS`: passed to the `+A` argument in vm.args.
+* `ERLANG_COOKIE`:  written to `~/.erlang.cookie` by the `erlang-cookie` script in `/usr/local/bin`.
+* `KAZOO_LOG_LEVEL`: lowercased and used as the value for the console log level in the log section of `config.ini`.
+* `KAZOO_LOG_COLOR`: used as the value for the `colored` tuple in `sys.config`.
+* `REGION`: interpolated with `DATACENTER` as such `${COUNTRY}-${REGION}` and stored in `KAZOO_ZONE`.  See `KAZOO_ZONE`.
+* `COUNTRY`: interpolated with `REGION` as such `${COUNTRY}-${REGION}` and stored in `KAZOO_ZONE`.  See `KAZOO_ZONE`.
+* `KAZOO_ZONE`: when provided, interpolation of `COUNTRY` and `REGION` is ignored and the value of `KAZOO_ZONE` is used directly. This is useful for local test and dev environments where ZONE's don't matter.  Used as name in `[zone]` section and as `zone` attribute in other sections of `config.ini`.
+* `COUCHDB_HOST`: the hostname or ip address of the load balancer to reach bigcouch or couchdb through. Used in the `bigcouch` section of `config.ini`.
+* `COUCHDB_DATA_PORT`: used as the value for the `port` key in the `bigcouch` section of `config.ini`.
+* `COUCHDB_ADMIN_PORT`: used as the value for the `admin_port` key in the `bigcouch` section of `config.ini`.
+* `COUCHDB_USER`: used as the value for the `username` key in the `bigcouch` section of `config.ini`.
+* `COUCHDB_PASS`: used as the value for the `password` key in the `bigcouch` section of `config.ini`.
+* `RABBITMQ_USER`: interpolated as such `"amqp://user:pass@host:5672"` and used for all `uri` keys in the `amqp` section or the `amqp_uri` keys in the `zone` section of `config.ini`.
+* `RABBITMQ_PASS`: interpolated as such `"amqp://user:pass@host:5672"` and used for all `uri` keys in the `amqp` section or the `amqp_uri` keys in the `zone` section of `config.ini`.
+* `RABBITMQ_HOST`: hostname or ip address, interpolated as such `"amqp://{user}:{pass}@{host}:5672"`, and used in the `amqp_uri` property of the `zone` section of `config.ini`.
 
 
 ## Extra tools
 ### In container
 There is a binary called [kazoo-tool](build/kazoo-tool) in `~/bin`.  It contains the useful functions such as remote_console, upgrade, etc found in the original kazoo service file.  Since using service files in a docker container is largely a very bad idea, I've extracted the useful functions and adapted them to work in the container environment.
-
-### Outside container
-In the [scripts](scripts) directory, there are two scripts: `do-kube`, and `do-local` that allow you to run a sup command on a local or remote instance of kazoo as well as the basic initialization commands for a new kazoo cluster. Run either command without arguments for usage.
 
 
 ## Usage
@@ -100,7 +73,7 @@ docker run -d \
     --name kazoo \
     -h kazoo.local \
     -e "COUCHDB_HOST=bigcouch.local" \
-    -e "KAZOO_AMQP_HOSTS=rabbitmq-alpha.local" \
+    -e "RABBITMQ_HOST=rabbitmq.local" \
     -e "KAZOO_LOG_LEVEL=debug" \
     -e "KAZOO_APPS=blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks" \
     -e "ERLANG_COOKIE=test-cookie" \
@@ -132,7 +105,7 @@ Edit the manifests under `kubernetes/<environment>` to reflect your specific env
 
 Create a secret for the erlang cookie:
 ```bash
-kubectl create secret generic erlang --from-literal=erlang.cookie=$(LC_ALL=C tr -cd '[:alnum:]' < /dev/urandom | head -c 64)
+kubectl create secret generic erlang --from-literal=cookie=$(LC_ALL=C tr -cd '[:alnum:]' < /dev/urandom | head -c 64)
 ```
 
 Ensure that:

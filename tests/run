@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 base=$(dirname $0)
-image=telephoneorg/testdocker
+image=telephoneorg/testdocker:latest
 
 
 if [[ $1 == 'local' ]]; then

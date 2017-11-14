@@ -3,17 +3,16 @@ services:
   kazoo:
     container_name: kazoo
     hostname: kazoo.local
-    build: images/kazoo
-    image: telephoneorg/kazoo:${TAG:-latest}
+    image: telephoneorg/kazoo:${DOCKER_TAG:-latest}
     environment:
       ERLANG_HOSTNAME: long
       ERLANG_COOKIE: test-cookie
-      RABBITMQ_HOSTS: rabbitmq.local
+      RABBITMQ_HOST: rabbitmq.local
       COUCHDB_HOST: couchdb.local
       COUCHDB_USER: admin
       COUCHDB_PASS: secret
       KAZOO_LOG_LEVEL: info
-      KAZOO_APPS: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,tasks,teletype,trunkstore,webhooks
+      KAZOO_APPS: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,tasks,teletype,trunkstore,webhooks
     ports:
     - "5555:5555"
     - "8000:8000"
@@ -33,10 +32,6 @@ services:
         condition: service_healthy
       couchdb:
         condition: service_healthy
-      freeswitch:
-        condition: service_healthy
-      kamailio:
-        condition: service_healthy
   rabbitmq:
     container_name: rabbitmq
     hostname: rabbitmq.local
@@ -50,43 +45,17 @@ services:
       local:
         aliases:
         - rabbitmq.local
-  freeswitch:
-    container_name: freeswitch
-    hostname: freeswitch.local
-    image: telephoneorg/freeswitch:latest
-    environment:
-      ERLANG_HOSTNAME: long
-      FREESWITCH_DISABLE_NAT_DETECTION: 'false'
-      FREESWITCH_RTP_PORT_RANGE: 16384-16484
-      ERLANG_COOKIE: test-cookie
-    ports:
-    - "11000:10000"
-    - "11000:10000/udp"
-    - "16384-16484:16384-16484/udp"
-    - "8031:8031"
-    networks:
-      local:
-        aliases:
-        - freeswitch.local
-    cap_add:
-    - IPC_LOCK
-    - NET_ADMIN
-    - NET_RAW
-    - NET_BROADCAST
-    - SYS_NICE
-    - SYS_RESOURCE
   couchdb:
     container_name: couchdb
     hostname: couchdb.local
     image: telephoneorg/couchdb:latest
     environment:
-      ERLANG_HOSTNAME: long
       COUCHDB_DEV_INIT: 'true'
+      ERLANG_COOKIE: test-cookie
       COUCHDB_ADMIN_USER: admin
       COUCHDB_ADMIN_PASS: secret
-      ERLANG_COOKIE: test-cookie
-      COUCHDB_SHARDS: 1
-      COUCHDB_LOG_LEVEL: warn
+      COUCHDB_SHARDS: '1'
+      COUCHDB_LOG_LEVEL: info
     ports:
     - "5984:5984"
     - "5986:5986"
@@ -94,49 +63,16 @@ services:
       local:
         aliases:
         - couchdb.local
-    cap_add:
-    - SYS_NICE
-    - SYS_RESOURCE
     volumes_from:
-    - couchdb-data-preset
+    - couchdb-data
+  kzutil:
+    build:
+      args:
+        KAZOO_VERSION: 4.1.40
+      context: images/kzutil
+    image: telephoneorg/kzutil:${DOCKER_TAG:-latest}
   couchdb-data:
     build: images/couchdb-data
-    image: telephoneorg/couchdb-data:latest
-  couchdb-data-preset:
-    build: images/couchdb-data-preset
-    image: telephoneorg/couchdb-data-preset:latest
-  kamailio:
-    container_name: kamailio
-    hostname: kamailio.valuphone.local
-    image: telephoneorg/kamailio:latest
-    environment:
-      KAMAILIO_LOG_LEVEL: info
-      KAMAILIO_ENABLE_ROLES: websockets,message,presence_query,presence_notify_sync,registrar_sync
-      RABBITMQ_HOSTS: rabbitmq.local
-    ports:
-    - "5060-5061:5060-5061"
-    - "5060:5060/udp"
-    - "5064-5065:5064-5065"
-    - "5064-5065:5064-5065/udp"
-    - "7000-7001:7000-7001"
-    - "7000:7000/udp"
-    networks:
-      local:
-        aliases:
-        - kazoo.local
-    cap_add:
-    - IPC_LOCK
-    - NET_ADMIN
-    - NET_RAW
-    - NET_BROADCAST
-    - SYS_NICE
-    - SYS_RESOURCE
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      local:
-        aliases:
-        - kamailio.valuphone.local
+    image: telephoneorg/couchdb-data:${DOCKER_TAG:-latest}
 networks:
   local:

@@ -4,8 +4,6 @@ python:
 services: docker
 env:
   global:
-  - DOCKER_USER=joeblackwaslike
-  - DOCKER_ORG=telephoneorg
   # DOCKER_PASS
   - secure: "jH8BW9v76umQKxJ8I+yRza1JvdERGTr1Rs1Ea3DmT163RI8QTZ8gDjguWIFP8wmuvqG5PT6ndq1Jq7wM0pUewjQA49T+1JGlz27HP98E2C1luBCVyTjkrGP0iAan4GfmAXYScG8idnPOPaKqbOAe9sSVhVSiSOTefTvU3ord64GG3A0xKw/q2OG8rjr4SarLLc68MCLA9+PdcypEG1jl7SXiwNoAGAsOiLHo7MKMdmHWtqq8CwYAB9k3s0q74ibe8pYmPVwk5YG2VsI7ckf78hVciaIncAOldy0CGw0qqcaXnDpb/uxjKCXryvivwmC8ynDbyWiu1OEhfyGc7iGrFuigEKt0VhmaW3VNecplbcNDNnzbeYVlzSVqGR1GFDwZhAx5pRrFJSUsQ7hfLz2vJ2icPv/EJfDns72PsIBmRZsZ7JCNmK8eqyYQZZ6pcrOerKxhx9tOkqG8Zao2jk/Ii1wLN+5dUZsr0vj7QbhmXl/wcoJVoMD1h8cvRT8dYXZJRnI5T63ZEqq/mdXeMRLTzV0jEsA74LtUOw6ZswSwtGvkQ+Va/v2vEIirzBt3icepU5+PvvJCiJcvIs/Gw3x/PqsoOSK9NQtrMYkp5k/Db+1dWwbyBxbopGY067UJBP/+XJetiupcy94H1HNz8YVlKWGdaEdILCH55T8o5dK3xw4="
 
@@ -19,10 +17,7 @@ notifications:
     on_success: always
     on_failure: always
 
-before_install:
-- source scripts/ci/environment.sh
-- pip install --upgrade docker-compose
-- pip install invoke
+before_install: pip install --upgrade docker-compose invoke pyyaml
 
 install: inv dc.build
 
@@ -30,11 +25,9 @@ script: true
 # inv test
 
 after_success:
-- ci-tag-build
-- hub-push
-- hub-updated-readme
-# - inv hub.push
-# - inv hub.update-readme
+- inv ci.tag-build
+- inv hub.push
+- inv hub.update-readme
 
 deploy:
   provider: releases
@@ -42,7 +35,6 @@ deploy:
     secure: p7a0iK9Ej3+DBhsxDjJKFQuGkpoVtt9FbedOc6mWTvIhxWUTnYoC60w4SUiuWg+A4fbUu+9SZYjFqQowQaFbDJKQfgBiM/DWD65n9FCZgYx9nRZ+fgqrHldKo9nElBMWfWk5KL/RRavB9YKSh+B5yCJAQiEMZn9K5QVL4uuRIXSEs5aLVKsrsNJJR7Wxs5D3UvmbkAxaSJhPfBAj5m1uSkrn6AzOZBJQ+PdnhnU2UhQqAgsx+c4UXJeVBpKbBt+3dWWcAiouQJLiTv0muGjys8UqY3wLcBDSvDPlEWrhhnQiI/8cTGUmvUoFF+sTAh+07/rEyyqC474tb6HF0SmbUWQzQvo96aepFGD0ObE6y0gmJJhc/Tj8vdGPmt8Qq8S2eP31j6wGt4JDLCOsEqGQM/KgknQ8pB03QOAyBUMhYVBTYj68vjeBm0CVH+EoeQLtRiNjXoGhcFnnsQlVwyJjHKIYxLl60Aksvj4ZzzsnnN5KY3mGpA+Q0VIGC7Zs1M3ljgoV+gGYLr6TUndsrt7kJhFoSKhQFBboKF4e2yW/ID/79SGz18aoCI38GjtUYx4WM4m714JZlqBhQUzTl9a/er2aQZBm6sOTxe5QUBsbfuHahjkuU6P+UEgDlgMiI7+WkoTv36uFT25He4B0H+cPDVTAC54jdx+uhGjGL+QQcCg=
   file:
   - images/couchdb-data/couchdb-data.tar.gz
-  - images/couchdb-data-preset/couchdb-data-preset.tar.gz
   overwrite: true
   on:
     repo: telephoneorg/docker-kazoo

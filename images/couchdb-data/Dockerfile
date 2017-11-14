@@ -1,5 +1,7 @@
-FROM alpine:latest
+FROM    alpine:latest
 
-ADD couchdb-data.tar.gz /volumes/couchdb
+ADD     couchdb-data.tar.gz /volumes/couchdb
 
-VOLUME ["/volumes/couchdb/data"]
+VOLUME  ["/volumes/couchdb/data"]
+
+HEALTHCHECK --interval=15s --timeout=5s CMD /bin/true
