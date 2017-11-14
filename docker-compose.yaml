@@ -3,6 +3,11 @@ services:
   kazoo:
     container_name: kazoo
     hostname: kazoo.local
+    build:
+      args:
+        KAZOO_VERSION: 4.1.40
+        KAZOO_CONFIGS_VERSION: 4.1.21
+      context: images/kazoo
     image: telephoneorg/kazoo:${DOCKER_TAG:-latest}
     environment:
       ERLANG_HOSTNAME: long

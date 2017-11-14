@@ -5,7 +5,7 @@ extras:
 - sup
 hub:
   images:
-  - couchdb
+  - kazoo
   - kzutil
   - couchdb-data
 tmpl:
