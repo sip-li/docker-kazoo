@@ -38,7 +38,7 @@ metadata:
     project: telephoneorg
     environment: production
 data:
-  sys.config: |
+  sys.config.j2: |
     ---
     target: /config/sys.config
     ---
@@ -212,7 +212,7 @@ spec:
         image: telephoneorg/tmpld
         imagePullPolicy: IfNotPresent
         args:
-        - tmpld /templates/**/*.j2
+        - tmpld /templates/*.j2
         env:
         - name: ERLANG_HOSTNAME
           valueFrom:
