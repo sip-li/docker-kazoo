@@ -13,3 +13,8 @@ def delete(ctx, environment=None):
     ctx.run('kubectl delete -f kubernetes/%s' % (
         environment or ctx.kube.environment
     ))
+
+
+@task(pre=[delete, deploy])
+def redeploy(ctx, environment=None):
+    pass

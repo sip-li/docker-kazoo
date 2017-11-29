@@ -13,7 +13,7 @@ metadata:
     project: {{ vars['project'] }}
     environment: {{ vars['environment'] }}
 data:
-  sys.config: |
+  sys.config.j2: |
     {{ file('../../includes/sys.config.inc')|indent(4) }}
   vm.args.j2: |
     {{ file('../../includes/vm.args.inc')|indent(4) }}

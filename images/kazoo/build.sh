@@ -29,6 +29,11 @@ pushd $tmpd
 	popd && rm -rf $tmpd && unset tmpd
 
 
+# corrections that should be pushed to kazoo-builder next cycle
+mv ~/bin/sup /usr/bin
+
+
+
 log::m-info "Adding app init to entrypoint.d ..."
 tee /etc/entrypoint.d/50-${APP}-init <<'EOF'
 # write the erlang cookie

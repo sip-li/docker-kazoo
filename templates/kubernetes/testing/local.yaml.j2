@@ -112,7 +112,7 @@ spec:
         image: {{ vars['images']['tmpld'] }}
         imagePullPolicy: IfNotPresent
         args:
-        - tmpld /templates/**/*.j2
+        - tmpld /templates/*.j2
         env:
         - name: ERLANG_HOSTNAME
           valueFrom:

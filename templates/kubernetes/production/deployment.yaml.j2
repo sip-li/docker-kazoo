@@ -43,7 +43,7 @@ spec:
         image: {{ vars['images']['tmpld'] }}
         imagePullPolicy: IfNotPresent
         args:
-        - tmpld /templates/**/*.j2
+        - tmpld /templates/*.j2
         env:
         - name: ERLANG_HOSTNAME
           valueFrom:
@@ -60,6 +60,34 @@ spec:
           mountPath: /templates
         - name: config
           mountPath: /config
+        resources:
+          requests:
+            cpu: 3
+            memory: 3Gi
+          limits:
+            cpu: 3
+            memory: 3Gi
+      - name: dl-assets
+        image: {{ vars['images']['kzutil'] }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - dl-assets
+        env:
+        - name: KAZOO_SOUNDS_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo
+              key: kzutil.sounds.version
+        - name: MONSTER_APPS_TAG
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo
+              key: kzutil.monster-apps.tag
+        volumeMounts:
+        - name: sounds
+          mountPath: /opt/kazoo/media/prompts
+        - name: monster-ui
+          mountPath: /var/www/html/monster-ui
       containers:
       - name: kazoo
         image: {{ vars['images']['kazoo'] }}
@@ -100,6 +128,10 @@ spec:
         volumeMounts:
         - name: config
           mountPath: /config
+        - name: sounds
+          mountPath: /opt/kazoo/media/prompts
+        - name: monster-ui
+          mountPath: /var/www/html/monster-ui
         resources:
           requests:
             cpu: 3
@@ -123,13 +155,19 @@ spec:
           timeoutSeconds: 5
           successThreshold: 1
           failureThreshold: 5
+        securityContext:
+          capabilities:
+            add:
+            - SYS_NICE
+            - SYS_RESOURCE
       volumes:
       - name: templates
         configMap:
           name: kazoo-templates
       - name: config
         emptyDir: {}
-      {# - name: healthz
-        configMap:
-          name: kazoo-healthz #}
+      - name: sounds
+        emptyDir: {}
+      - name: monster-ui
+        emptyDir: {}
       restartPolicy: Always

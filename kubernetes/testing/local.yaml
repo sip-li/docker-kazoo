@@ -28,6 +28,8 @@ data:
   kazoo.apps: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,tasks,teletype,trunkstore,webhooks
   kazoo.log.level: info
   kazoo.log.color: 'true'
+  kzutil.sounds.version: '4.1.0'
+  kzutil.monster-apps.tag: '4.1'
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -43,15 +45,15 @@ data:
     target: /config/sys.config
     ---
     
-    {%- set config_map = env.get('CONFIG_MAP', 'kazoo') %}
-    {% set config = kube.get('configmap', config_map).data -%}
+    {%- set config_map = env.get('CONFIG_MAP', 'kazoo') -%}
+    {%- set config = kube.get('configmap', config_map).data -%}
     
     [
         {lager, [
             {handlers, [
                 {lager_console_backend, info}
             ]},
-        {colored, {{ config['kazoo.log.color'] }}},
+        {colored, {{ config.get('kazoo.log.color', 'true') }}},
         {colors, [
             {debug,     "\e[0;38m" },
             {info,      "\e[1;32m" },
@@ -79,9 +81,9 @@ data:
     -mode interactive
     
     {% if config.get('erlang.hostname') == 'long' %}
-    -name kazoo
+    -name kazoo_apps
     {% else %}
-    -sname kazoo
+    -sname kazoo_apps
     {% endif %}
     
     -config /config/sys.config
@@ -90,9 +92,9 @@ data:
     
     +K true
     
-    +P {{ config.get('erlang.processes', shell('nproc') * 3200) }}
+    +P {{ config.get('erlang.processes', shell('nproc')|int * 2048) }}
     
-    +A {{ config.get('erlang.threads', shell('nproc') * 16) }}
+    +A {{ config.get('erlang.threads', shell('nproc')|int * 32) }}
     
     +W w
     
@@ -104,21 +106,21 @@ data:
     target: /config/config.ini
     ---
     
-    {%- set config_map = env.get('CONFIG_MAP', 'kazoo') %}
-    {% set config = kube.get('configmap', config_map).data %}
-    {% set rabbitmq = kube.get('secret', 'rabbitmq').data %}
-    {% set erlang = kube.get('secret', 'erlang').data %}
-    {% set couchdb = kube.get('secret', 'couchdb').data %}
+    {%- set config_map = env.get('CONFIG_MAP', 'kazoo') -%}
+    {%- set config = kube.get('configmap', config_map).data -%}
+    {%- set rabbitmq = kube.get('secret', 'rabbitmq').data -%}
+    {%- set erlang = kube.get('secret', 'erlang').data -%}
+    {%- set couchdb = kube.get('secret', 'couchdb').data -%}
     
-    {% set zone = '{}-{}'.format(
+    {%- set zone = '{}-{}'.format(
         config.get('kazoo.country', 'us'), config.get('kazoo.region', 'east')
-        ) %}
-    {% set amqp_uri = 'amqp://{}:{}@{}:5672'.format(
+        ) -%}
+    {%- set amqp_uri = 'amqp://{}:{}@{}:5672'.format(
         rabbitmq.get('user', 'guest'),
         rabbitmq.get('pass', 'guest'),
         config.get('rabbitmq.host', 'rabbitmq')
-        ) %}
-    {% set fqdn = shell('hostname -f') -%}
+        ) -%}
+    {%- set fqdn = shell('hostname -f') -%}
     
     [zone]
     name = {{ zone }}
@@ -131,8 +133,8 @@ data:
     cookie = {{ erlang.get('cookie', 'insecure-cookie') }}
     compact_automatically = true
     {% if couchdb.get('user') and couchdb.get('pass') %}
-    username = "{{ couchdb['user'] }}"
-    password = "{{ couchdb['pass'] }}"
+    username = "{{ couchdb.get('user', 'admin') }}"
+    password = "{{ couchdb.get('pass', 'secret') }}"
     {% endif %}
     
     [kazoo_apps]
@@ -212,7 +214,7 @@ spec:
         image: telephoneorg/tmpld
         imagePullPolicy: IfNotPresent
         args:
-        - tmpld /templates/**/*.j2
+        - tmpld /templates/*.j2
         env:
         - name: ERLANG_HOSTNAME
           valueFrom:

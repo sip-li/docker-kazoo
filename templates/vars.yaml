@@ -3,6 +3,7 @@ project: telephoneorg
 environment: production
 images:
   kazoo: telephoneorg/kazoo:latest
+  kzutil: telephoneorg/kzutil:latest
   tmpld: telephoneorg/tmpld
   goss: telephoneorg/goss
   kubewait: telephoneorg/kubewait

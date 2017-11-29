@@ -2,15 +2,15 @@
 target: /config/sys.config
 ---
 
-{%- set config_map = env.get('CONFIG_MAP', 'kazoo') %}
-{% set config = kube.get('configmap', config_map).data -%}
+{%- set config_map = env.get('CONFIG_MAP', 'kazoo') -%}
+{%- set config = kube.get('configmap', config_map).data -%}
 
 [
     {lager, [
         {handlers, [
             {lager_console_backend, info}
         ]},
-    {colored, {{ config['kazoo.log.color'] }}},
+    {colored, {{ config.get('kazoo.log.color', 'true') }}},
     {colors, [
         {debug,     "\e[0;38m" },
         {info,      "\e[1;32m" },

@@ -87,7 +87,7 @@ def build_config(path='config.yaml'):
             image='telephoneorg/dcgoss:latest'
         ),
         kube=dict(
-            environment='testing'
+            environment='production'
         ),
         hub=dict(
             images=['']

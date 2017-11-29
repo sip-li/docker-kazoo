@@ -2,21 +2,21 @@
 target: /config/config.ini
 ---
 
-{%- set config_map = env.get('CONFIG_MAP', 'kazoo') %}
-{% set config = kube.get('configmap', config_map).data %}
-{% set rabbitmq = kube.get('secret', 'rabbitmq').data %}
-{% set erlang = kube.get('secret', 'erlang').data %}
-{% set couchdb = kube.get('secret', 'couchdb').data %}
+{%- set config_map = env.get('CONFIG_MAP', 'kazoo') -%}
+{%- set config = kube.get('configmap', config_map).data -%}
+{%- set rabbitmq = kube.get('secret', 'rabbitmq').data -%}
+{%- set erlang = kube.get('secret', 'erlang').data -%}
+{%- set couchdb = kube.get('secret', 'couchdb').data -%}
 
-{% set zone = '{}-{}'.format(
+{%- set zone = '{}-{}'.format(
     config.get('kazoo.country', 'us'), config.get('kazoo.region', 'east')
-    ) %}
-{% set amqp_uri = 'amqp://{}:{}@{}:5672'.format(
+    ) -%}
+{%- set amqp_uri = 'amqp://{}:{}@{}:5672'.format(
     rabbitmq.get('user', 'guest'),
     rabbitmq.get('pass', 'guest'),
     config.get('rabbitmq.host', 'rabbitmq')
-    ) %}
-{% set fqdn = shell('hostname -f') -%}
+    ) -%}
+{%- set fqdn = shell('hostname -f') -%}
 
 [zone]
 name = {{ zone }}
@@ -29,8 +29,8 @@ admin_port = {{ config.get('couchdb.admin-port', '5986') }}
 cookie = {{ erlang.get('cookie', 'insecure-cookie') }}
 compact_automatically = true
 {% if couchdb.get('user') and couchdb.get('pass') %}
-username = "{{ couchdb['user'] }}"
-password = "{{ couchdb['pass'] }}"
+username = "{{ couchdb.get('user', 'admin') }}"
+password = "{{ couchdb.get('pass', 'secret') }}"
 {% endif %}
 
 [kazoo_apps]

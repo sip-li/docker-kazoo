@@ -15,9 +15,9 @@ target: /config/vm.args
 
 # Use the following erlang hostname
 {% if config.get('erlang.hostname') == 'long' %}
--name kazoo
+-name kazoo_apps
 {% else %}
--sname kazoo
+-sname kazoo_apps
 {% endif %}
 
 # Use the following sys.config
@@ -31,10 +31,10 @@ target: /config/vm.args
 +K true
 
 # Maximum number of processes
-+P {{ config.get('erlang.processes', shell('nproc') * 3200) }}
++P {{ config.get('erlang.processes', shell('nproc')|int * 2048) }}
 
 # Start a pool of asynchronous IO threads
-+A {{ config.get('erlang.threads', shell('nproc') * 16) }}
++A {{ config.get('erlang.threads', shell('nproc')|int * 32) }}
 
 # Treat error_logger:warning_msg/2 as warnings instead of errors (default)
 +W w

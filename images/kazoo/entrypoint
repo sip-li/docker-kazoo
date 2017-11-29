@@ -15,8 +15,8 @@ set -e
 : readonly ${KAZOO_APPS:=blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,teletype,trunkstore,webhooks}
 : readonly ${ERLANG_COOKIE:=insecure-cookie}
 
-: declare -ir ${ERLANG_THREADS:=$(( $(nproc) * 16 ))}
-: declare -ir ${ERLANG_PROCESSES:=$(( $(nproc) * 3200 ))}
+: declare -ir ${ERLANG_PROCESSES:=$(( $(nproc) * 2048 ))}
+: declare -ir ${ERLANG_THREADS:=$(( $(nproc) * 32 ))}
 
 # options: debug info notice warning error critical alert emergency
 : readonly ${KAZOO_LOG_LEVEL:=info}
