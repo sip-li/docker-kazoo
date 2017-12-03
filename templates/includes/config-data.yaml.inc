@@ -8,4 +8,4 @@ kazoo.apps: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangu
 kazoo.log.level: info
 kazoo.log.color: 'true'
 kzutil.sounds.version: '4.1.0'
-kzutil.monster-apps.tag: '4.1'
+kzutil.monster-apps.tag: '4.1.56'

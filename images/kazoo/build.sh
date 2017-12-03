@@ -19,19 +19,14 @@ apt-get install -yqq \
 
 tmpd=$(mktemp -d)
 pushd $tmpd
-	apt-get update -qq
-	log::m-info "Kazoo & Kazoo Configs"
+	log::m-info "Kazoo $KAZOO_VERSION & Kazoo Configs $KAZOO_CONFIGS_VERSION"
 	log::m-info "  Downloading ..."
+
 	curl -sLO https://github.com/telephoneorg/kazoo-builder/releases/download/v$KAZOO_VERSION/kazoo_${KAZOO_VERSION}.deb
 	curl -sLO https://github.com/telephoneorg/kazoo-builder/releases/download/v$KAZOO_VERSION/kazoo-configs_${KAZOO_CONFIGS_VERSION}.deb
 	log::m-info "  Installing ..."
 	apt install -y ./*.deb
 	popd && rm -rf $tmpd && unset tmpd
-
-
-# corrections that should be pushed to kazoo-builder next cycle
-mv ~/bin/sup /usr/bin
-
 
 
 log::m-info "Adding app init to entrypoint.d ..."

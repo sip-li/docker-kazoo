@@ -5,7 +5,7 @@ services:
     hostname: kazoo.local
     build:
       args:
-        KAZOO_VERSION: 4.1.40
+        KAZOO_VERSION: 4.1.41
         KAZOO_CONFIGS_VERSION: 4.1.21
       context: images/kazoo
     image: telephoneorg/kazoo:${DOCKER_TAG:-latest}
@@ -14,10 +14,7 @@ services:
       ERLANG_COOKIE: test-cookie
       RABBITMQ_HOST: rabbitmq.local
       COUCHDB_HOST: couchdb.local
-      COUCHDB_USER: admin
-      COUCHDB_PASS: secret
       KAZOO_LOG_LEVEL: info
-      KAZOO_APPS: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,tasks,teletype,trunkstore,webhooks
     ports:
     - "5555:5555"
     - "8000:8000"
@@ -73,7 +70,7 @@ services:
   kzutil:
     build:
       args:
-        KAZOO_VERSION: 4.1.40
+        KAZOO_VERSION: 4.1.41
       context: images/kzutil
     image: telephoneorg/kzutil:${DOCKER_TAG:-latest}
   couchdb-data:

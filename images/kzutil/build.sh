@@ -21,8 +21,10 @@ pushd $tmpd
 	apt-get update -qq
 	curl -sLO https://github.com/telephoneorg/kazoo-builder/releases/download/v$KAZOO_VERSION/kazoo_${KAZOO_VERSION}.deb
     dpkg -x kazoo_*.deb .
-    mv opt/kazoo/sup.bash /etc/bash_completion.d
-    mv opt/kazoo/bin/{sup,nodetool,install_upgrade.escript} /usr/bin
+
+    mv etc/bash_completion.d/sup.bash /etc/bash_completion.d
+    mv opt/kazoo/bin/{nodetool,install_upgrade.escript} /usr/bin
+    mv usr/bin/sup /usr/bin
     popd && rm -rf $tmpd && unset tmpd
 
 

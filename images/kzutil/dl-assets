@@ -2,22 +2,27 @@
 
 set -e
 
-log::m-info "Kazoo Sounds: $KAZOO_SOUNDS_VERSION"
-tmpd=$(mktemp -d)
-pushd $tmpd
-    log::m-info "  Downloading ..."
-    curl -LO https://github.com/telephoneorg/kazoo-builder/releases/download/v$KAZOO_VERSION/kazoo-sounds_$KAZOO_SOUNDS_VERSION.deb
-    log::m-info "  Installing ...\n"
-    dpkg -i kazoo-sounds_*.deb
-    popd && rm -rf $tmpd
+# a reasonable indication that a volume is mounted here waiting for prompts
+if [[ -d /opt/kazoo/media/prompts || -L /opt/kazoo/media/prompts ]]; then
+    log::m-info "Kazoo Sounds: $KAZOO_SOUNDS_VERSION"
+    tmpd=$(mktemp -d)
+    pushd $tmpd
+        log::m-info "  Downloading ..."
+        curl -LO https://github.com/telephoneorg/kazoo-builder/releases/download/v$KAZOO_VERSION/kazoo-sounds_$KAZOO_SOUNDS_VERSION.deb
+        log::m-info "  Installing ...\n"
+        dpkg -i kazoo-sounds_*.deb
+        popd && rm -rf $tmpd
+fi
 
-
-log::m-info "Monster Apps: $MONSTER_APPS_TAG "
-tmpd=$(mktemp -d)
-pushd $tmpd
-    log::m-info "  Downloading ..."
-    curl -LO https://github.com/telephoneorg/monster-ui-builder/releases/download/v$MONSTER_APPS_TAG/monster-ui-debs-all.tar.gz
-    log::m-info "  Installing ...\n"
-    tar xzvf monster-ui-*.tar.gz
-    dpkg -i monster*.deb
-    popd && rm -rf $tmpd
+# a reasonable indication that a volume is mounted here waiting for monster-ui
+if [[ -d /var/www/html/monster-ui || -L /var/www/html/monster-ui ]]; then
+    log::m-info "Monster Apps: $MONSTER_APPS_TAG "
+    tmpd=$(mktemp -d)
+    pushd $tmpd
+        log::m-info "  Downloading ..."
+        curl -LO https://github.com/telephoneorg/monster-ui-builder/releases/download/v$MONSTER_APPS_TAG/monster-ui-debs-all.tar.gz
+        log::m-info "  Installing ...\n"
+        tar xzvf monster-ui-*.tar.gz
+        dpkg -i monster*.deb
+        popd && rm -rf $tmpd
+fi

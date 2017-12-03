@@ -10,7 +10,7 @@ def tag_build(ctx):
     org = current_image = ctx.docker['org']
 
     for name in ctx.hub['images']:
-        current_image = '{}/{}:{}'.format(org, name, get_docker_tag_ci())
+        current_image = '{}/{}:{}'.format(org, name, util.get_docker_tag_ci())
 
         build_tag = 'build-' + os.getenv('TRAVIS_BUILD_NUMBER', '0')
         build_image = '{}/{}:{}'.format(org, name, build_tag)

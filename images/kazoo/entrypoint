@@ -22,7 +22,6 @@ set -e
 : readonly ${KAZOO_LOG_LEVEL:=info}
 : readonly ${KAZOO_LOG_COLOR:=true}
 
-
 : readonly ${COUCHDB_HOST:=couchdb}
 : readonly ${COUCHDB_DATA_PORT:=5984}
 : readonly ${COUCHDB_ADMIN_PORT:=5986}
@@ -36,15 +35,9 @@ set -e
 : readonly ${RABBITMQ_PASS:=guest}
 
 
-for file in sys.config vm.args config.ini; do
-    if [[ -e /config/$file ]]; then
-        ln -sf /config/$file /etc/kazoo/core/$file
-    fi
-done
-
-
-if [[ ! -e /config/sys.config ]]; then
-    log::m-info "Writing $APP sys.config ..."
+if [[ -e /config/sys.config ]]; then
+    ln -sf /config/sys.config /etc/kazoo/core/sys.config
+else
     tee /etc/kazoo/core/sys.config <<EOF
 [
     {lager, [
@@ -69,8 +62,9 @@ EOF
 fi
 
 
-if [[ ! -e /config/vm.args ]]; then
-    log::m-info "Writing $APP vm.args ..."
+if [[ -e /config/vm.args ]]; then
+    ln -sf /config/vm.args /etc/kazoo/core/vm.args
+else
     tee /etc/kazoo/core/vm.args <<EOF
 # disable sasl error logger
 -sasl sasl_error_logger false
@@ -112,21 +106,13 @@ EOF
 fi
 
 
-if [[ ! -e /config/config.ini ]]; then
-    log::m-info "Writing $APP config.ini ..."
-    cat > /etc/kazoo/core/config.ini <<EOF
+if [[ -e /config/config.ini ]]; then
+    ln -sf /config/config.ini /etc/kazoo/core/config.ini
+else
+    tee /etc/kazoo/core/config.ini <<EOF
 [zone]
 name = $KAZOO_ZONE
 amqp_uri = "amqp://$RABBITMQ_USER:$RABBITMQ_PASS@$RABBITMQ_HOST:5672"
-
-[bigcouch]
-ip = "$COUCHDB_HOST"
-port = $COUCHDB_DATA_PORT
-admin_port = $COUCHDB_ADMIN_PORT
-cookie = $ERLANG_COOKIE
-compact_automatically = true
-;;;username = "$COUCHDB_USER"
-;;;password = "$COUCHDB_PASS"
 
 [kazoo_apps]
 host = $PUBLIC_FQDN
@@ -135,13 +121,22 @@ zone = $KAZOO_ZONE
 
 [log]
 console = $KAZOO_LOG_LEVEL
+
+[bigcouch]
+ip = "$COUCHDB_HOST"
+port = $COUCHDB_DATA_PORT
+admin_port = $COUCHDB_ADMIN_PORT
+cookie = $ERLANG_COOKIE
+compact_automatically = true
 EOF
-# if COUCHDB_USER + COUCHDB_PASS non-empty unescape the username and password
-# above.
-if [[ ! -z $COUCHDB_USER && ! -z $COUCHDB_PASS ]]; then
-    sed -i 's/^\;\;\;//g' /etc/kazoo/core/config.ini
-fi
-cat /etc/kazoo/core/config.ini
+    # if COUCHDB_USER + COUCHDB_PASS non-empty unescape the username and password
+    # above.
+    if [[ ! -z $COUCHDB_USER && ! -z $COUCHDB_PASS ]]; then
+        tee --append /etc/kazoo/core/config.ini <<EOF
+username = "$COUCHDB_USER"
+password = "$COUCHDB_PASS"
+EOF
+    fi
 fi
 
 
@@ -151,4 +146,4 @@ fixattrs
 
 log::m-info "Starting $APP ..."
 cd ~
-    exec gosu $USER erl -args_file /etc/kazoo/core/vm.args -- foreground 2>&1
+    exec gosu $USER erl -args_file /etc/kazoo/core/vm.args -- foreground
