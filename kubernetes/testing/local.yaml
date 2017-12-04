@@ -28,8 +28,9 @@ data:
   kazoo.apps: blackhole,callflow,cdr,conference,crossbar,doodle,ecallmgr,fax,hangups,hotornot,konami,jonny5,media_mgr,milliwatt,omnipresence,pivot,registrar,reorder,stepswitch,sysconf,tasks,teletype,trunkstore,webhooks
   kazoo.log.level: info
   kazoo.log.color: 'true'
-  kzutil.sounds.version: '4.1.0'
-  kzutil.monster-apps.tag: '4.1.56'
+  kzutil.kazoo.sounds.tag: '4.1.0'
+  kzutil.monster-apps.core.tag: '4.1.56'
+  kzutil.monster-apps.custom.tag: '4.2-0'
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -44,10 +45,10 @@ data:
     ---
     target: /config/sys.config
     ---
-    
+
     {%- set config_map = env.get('CONFIG_MAP', 'kazoo') -%}
     {%- set config = kube.get('configmap', config_map).data -%}
-    
+
     [
         {lager, [
             {handlers, [
@@ -73,45 +74,45 @@ data:
     ---
     {% set config_map = env.get('CONFIG_MAP', 'kazoo') %}
     {% set config = kube.get('configmap', config_map).data -%}
-    
+
     -sasl sasl_error_logger false
-    
+
     -boot /opt/kazoo/releases/4.0.0/kazoo
-    
+
     -mode interactive
-    
+
     {% if config.get('erlang.hostname') == 'long' %}
     -name kazoo_apps
     {% else %}
     -sname kazoo_apps
     {% endif %}
-    
+
     -config /config/sys.config
-    
+
     -kernel inet_dist_listen_min 11500 inet_dist_listen_max 11999
-    
+
     +K true
-    
+
     +P {{ config.get('erlang.processes', shell('nproc')|int * 2048) }}
-    
+
     +A {{ config.get('erlang.threads', shell('nproc')|int * 32) }}
-    
+
     +W w
-    
+
     +Bd -noinput
-    
+
     -s kazoo_apps_app
   config.ini.j2: |
     ---
     target: /config/config.ini
     ---
-    
+
     {%- set config_map = env.get('CONFIG_MAP', 'kazoo') -%}
     {%- set config = kube.get('configmap', config_map).data -%}
     {%- set rabbitmq = kube.get('secret', 'rabbitmq').data -%}
     {%- set erlang = kube.get('secret', 'erlang').data -%}
     {%- set couchdb = kube.get('secret', 'couchdb').data -%}
-    
+
     {%- set zone = '{}-{}'.format(
         config.get('kazoo.country', 'us'), config.get('kazoo.region', 'east')
         ) -%}
@@ -121,11 +122,11 @@ data:
         config.get('rabbitmq.host', 'rabbitmq')
         ) -%}
     {%- set fqdn = shell('hostname -f') -%}
-    
+
     [zone]
     name = {{ zone }}
     amqp_uri = "{{ amqp_uri }}"
-    
+
     [bigcouch]
     ip = "{{ config.get('couchdb.host', 'couchdb-lb') }}"
     port = {{ config.get('couchdb.port', '5984') }}
@@ -136,12 +137,12 @@ data:
     username = "{{ couchdb.get('user', 'admin') }}"
     password = "{{ couchdb.get('pass', 'secret') }}"
     {% endif %}
-    
+
     [kazoo_apps]
     host = {{ fqdn }}
     cookie = {{ erlang.get('cookie', 'insecure-cookie') }}
     zone = {{ zone }}
-    
+
     [log]
     console = {{ config.get('kazoo.log.level', 'info') }}
 ---
@@ -231,6 +232,35 @@ spec:
           mountPath: /templates
         - name: config
           mountPath: /config
+      - name: dl-assets
+        image: telephoneorg/kzutil:latest
+        imagePullPolicy: Always
+        args:
+        - dl-assets
+        - kazoo-sounds
+        - monster-apps-core
+        # - monster-apps-custom
+        env:
+        - name: KAZOO_SOUNDS_TAG
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo
+              key: kzutil.kazoo.sounds.tag
+        - name: MONSTER_APPS_CORE_TAG
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo
+              key: kzutil.monster-apps.core.tag
+        - name: MONSTER_APPS_CUSTOM_TAG
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo
+              key: kzutil.monster-apps.custom.tag
+        # - name: GITHUB_OAUTH_TOKEN
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: github
+        #       key: token
       containers:
       - name: kazoo
         image: telephoneorg/kazoo:latest

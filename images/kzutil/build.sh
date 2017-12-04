@@ -28,6 +28,15 @@ pushd $tmpd
     popd && rm -rf $tmpd && unset tmpd
 
 
+tmpd=$(mktemp -d)
+pushd $tmpd
+    curl -LO \
+        https://github.com/gruntwork-io/fetch/releases/download/v0.1.1/fetch_linux_amd64
+    chmod +x fetch*
+    mv fetch* /usr/bin/fetch
+    popd && rm -rf $tmpd && unset tmpd
+
+
 log::m-info "Cleaning up ..."
 apt-clean --aggressive
 

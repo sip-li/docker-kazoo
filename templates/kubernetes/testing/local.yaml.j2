@@ -129,6 +129,40 @@ spec:
           mountPath: /templates
         - name: config
           mountPath: /config
+      - name: dl-assets
+        image: {{ vars['images']['kzutil'] }}
+        imagePullPolicy: Always
+        args:
+        - dl-assets
+        - kazoo-sounds
+        - monster-apps-core
+        - monster-apps-custom
+        env:
+        - name: KAZOO_SOUNDS_TAG
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo
+              key: kzutil.kazoo.sounds.tag
+        - name: MONSTER_APPS_CORE_TAG
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo
+              key: kzutil.monster-apps.core.tag
+        - name: MONSTER_APPS_CUSTOM_TAG
+          valueFrom:
+            configMapKeyRef:
+              name: kazoo
+              key: kzutil.monster-apps.custom.tag
+        - name: GITHUB_OAUTH_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github
+              key: token
+        volumeMounts:
+        - name: sounds
+          mountPath: /opt/kazoo/media/prompts
+        - name: monster-ui
+          mountPath: /var/www/html/monster-ui
       containers:
       - name: kazoo
         image: {{ vars['images']['kazoo'] }}

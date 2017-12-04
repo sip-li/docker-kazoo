@@ -15,10 +15,12 @@ LABEL   app.kazoo.core.version=$KAZOO_VERSION
 COPY    build.sh /tmp/
 RUN     /tmp/build.sh
 
-ENV     KAZOO_SOUNDS_VERSION 4.1.0
+ENV     KAZOO_SOUNDS_TAG 4.1.0
 ENV     MONSTER_APPS_TAG 4.1
-LABEL   app.kazoo.sounds.version=$KAZOO_SOUNDS_VERSION
-LABEL   app.monster.apps.tag=$MONSTER_APPS_TAG
+ENV     MONSTER_APPS_CUSTOM_TAG 4.2-0
+LABEL   app.kazoo.sounds.version=$KAZOO_SOUNDS_TAG
+LABEL   app.monster-apps.core.tag=$MONSTER_APPS_CORE_TAG
+LABEL   app.monster-apps.custom.tag=$MONSTER_APPS_CUSTOM_TAG
 
 COPY    sup /usr/local/bin/
 COPY    kazoo-tool /usr/local/bin/
