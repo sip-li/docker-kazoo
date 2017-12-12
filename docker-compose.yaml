@@ -5,7 +5,7 @@ services:
     hostname: kazoo.local
     build:
       args:
-        KAZOO_VERSION: 4.1.41
+        KAZOO_VERSION: 4.1.43
         KAZOO_CONFIGS_VERSION: 4.1.21
       context: images/kazoo
     image: telephoneorg/kazoo:${DOCKER_TAG:-latest}
@@ -70,7 +70,7 @@ services:
   kzutil:
     build:
       args:
-        KAZOO_VERSION: 4.1.41
+        KAZOO_VERSION: 4.1.43
       context: images/kzutil
     image: telephoneorg/kzutil:${DOCKER_TAG:-latest}
   couchdb-data:

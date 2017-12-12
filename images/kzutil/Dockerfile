@@ -9,7 +9,7 @@ ENV     HOME /opt/$APP
 WORKDIR $HOME
 
 ARG     KAZOO_VERSION
-ENV     KAZOO_VERSION=${KAZOO_VERSION:-4.1.41}
+ENV     KAZOO_VERSION=${KAZOO_VERSION:-4.1.43}
 LABEL   app.kazoo.core.version=$KAZOO_VERSION
 
 COPY    build.sh /tmp/
