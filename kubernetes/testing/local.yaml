@@ -41,7 +41,7 @@ metadata:
     project: telephoneorg
     environment: production
 data:
-  sys.config: |
+  sys.config.j2: |
     ---
     target: /config/sys.config
     ---
@@ -217,6 +217,11 @@ spec:
         args:
         - tmpld /templates/*.j2
         env:
+        - name: KUBE_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
         - name: ERLANG_HOSTNAME
           valueFrom:
             configMapKeyRef:
